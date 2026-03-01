@@ -1,8 +1,8 @@
-import { CopyButton } from "@/components/copy-button"
-import { ServiceStatus } from "@/components/service-status"
-import { SystemMetricsCard } from "@/components/system-metrics"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { CopyButton } from "@/components/copy-button";
+import { ServiceStatus } from "@/components/service-status";
+import { SystemMetricsCard } from "@/components/system-metrics";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -10,7 +10,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
+} from "@/components/ui/card";
 
 const services = [
   {
@@ -35,13 +35,20 @@ const services = [
     category: "Network",
   },
   {
+    name: "OpenClaw",
+    description: "Autonomous AI agent",
+    url: "http://192.168.4.142:18789",
+    pingUrl: "http://192.168.4.142:18789",
+    category: "Development",
+  },
+  {
     name: "code-server",
     description: "Browser-based VS Code",
     url: "http://192.168.4.142:8080/login",
     pingUrl: "http://192.168.4.142:8080/favicon.ico",
     category: "Development",
   },
-]
+];
 
 const quickActions = [
   {
@@ -49,7 +56,7 @@ const quickActions = [
     description: "Open a secure shell session",
     url: "ssh://administrator@192.168.4.140:22",
   },
-]
+];
 
 export default function HomePage() {
   return (
@@ -63,8 +70,7 @@ export default function HomePage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-            <Badge variant="secondary">Ubuntu 22.04</Badge>
-            <Badge variant="outline">LAN only</Badge>
+            <Badge variant="secondary">Ubuntu 24.04.3 LTS</Badge>
             <span>192.168.4.142</span>
           </div>
         </div>
@@ -81,7 +87,10 @@ export default function HomePage() {
             </CardHeader>
             <CardContent className="grid gap-4">
               {quickActions.map((action) => (
-                <div key={action.label} className="flex items-start justify-between gap-4">
+                <div
+                  key={action.label}
+                  className="flex items-start justify-between gap-4"
+                >
                   <div>
                     <p className="text-sm font-medium">{action.label}</p>
                     <p className="text-xs text-muted-foreground">
@@ -91,11 +100,7 @@ export default function HomePage() {
                   <div className="flex items-center gap-2 self-end">
                     <CopyButton value={action.url} label="Copy" />
                     <Button asChild size="sm">
-                      <a
-                        href={action.url}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
+                      <a href={action.url} target="_blank" rel="noreferrer">
                         Open
                       </a>
                     </Button>
@@ -138,11 +143,7 @@ export default function HomePage() {
                 <div className="flex items-center gap-2">
                   <CopyButton value={service.url} label="Copy" />
                   <Button asChild size="sm">
-                    <a
-                      href={service.url}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
+                    <a href={service.url} target="_blank" rel="noreferrer">
                       Open
                     </a>
                   </Button>
@@ -153,5 +154,5 @@ export default function HomePage() {
         </section>
       </main>
     </div>
-  )
+  );
 }
