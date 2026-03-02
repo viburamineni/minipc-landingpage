@@ -52,41 +52,23 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       size,
       asChild = false,
       haptic = true,
-      onPointerDown,
       onClick,
       disabled,
       ...props
     },
     ref,
   ) => {
-    const lastHapticAtRef = React.useRef(0)
     const Comp = asChild ? Slot : "button"
-
-    const maybeTriggerHaptic = () => {
-      if (!haptic || disabled) {
-        return
-      }
-
-      const now = Date.now()
-      if (now - lastHapticAtRef.current < 80) {
-        return
-      }
-
-      lastHapticAtRef.current = now
-      triggerButtonHaptic()
-    }
 
     return (
       <Comp
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
         disabled={disabled}
-        onPointerDown={(event: React.PointerEvent<HTMLButtonElement>) => {
-          maybeTriggerHaptic()
-          onPointerDown?.(event)
-        }}
         onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
-          maybeTriggerHaptic()
+          if (haptic && !disabled) {
+            triggerButtonHaptic()
+          }
           onClick?.(event)
         }}
         {...props}

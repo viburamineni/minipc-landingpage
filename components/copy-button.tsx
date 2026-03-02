@@ -22,23 +22,41 @@ export function CopyButton({
 }: CopyButtonProps) {
   const [copied, setCopied] = React.useState(false)
 
-  const handleCopy = async () => {
+  const copyWithExecCommand = () => {
+    const textarea = document.createElement("textarea")
+    textarea.value = value
+    textarea.setAttribute("readonly", "true")
+    textarea.style.position = "absolute"
+    textarea.style.left = "-9999px"
+    document.body.appendChild(textarea)
+    textarea.select()
+
+    const didCopy = document.execCommand("copy")
+    document.body.removeChild(textarea)
+
+    return didCopy
+  }
+
+  const handleCopy = () => {
     try {
-      if (navigator?.clipboard?.writeText) {
-        await navigator.clipboard.writeText(value)
-      } else {
-        const textarea = document.createElement("textarea")
-        textarea.value = value
-        textarea.setAttribute("readonly", "true")
-        textarea.style.position = "absolute"
-        textarea.style.left = "-9999px"
-        document.body.appendChild(textarea)
-        textarea.select()
-        document.execCommand("copy")
-        document.body.removeChild(textarea)
+      const didCopy = copyWithExecCommand()
+      if (didCopy) {
+        setCopied(true)
+        window.setTimeout(() => setCopied(false), 2000)
+        return
       }
-      setCopied(true)
-      window.setTimeout(() => setCopied(false), 2000)
+
+      if (navigator?.clipboard?.writeText) {
+        void navigator.clipboard
+          .writeText(value)
+          .then(() => {
+            setCopied(true)
+            window.setTimeout(() => setCopied(false), 2000)
+          })
+          .catch(() => setCopied(false))
+      } else {
+        setCopied(false)
+      }
     } catch {
       setCopied(false)
     }

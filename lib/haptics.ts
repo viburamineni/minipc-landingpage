@@ -4,6 +4,20 @@ const IOS_PULSE_MS = 16
 
 type HapticPattern = number | number[]
 
+function isLikelyIOS() {
+  if (typeof navigator === "undefined") {
+    return false
+  }
+
+  const platform = navigator.platform ?? ""
+  const userAgent = navigator.userAgent ?? ""
+
+  return (
+    /iPad|iPhone|iPod/.test(userAgent) ||
+    (platform === "MacIntel" && navigator.maxTouchPoints > 1)
+  )
+}
+
 function ensureIosHapticLabel() {
   if (typeof document === "undefined") {
     return null
@@ -64,6 +78,7 @@ function triggerIosSwitchPattern(pattern: HapticPattern) {
   const segments = Array.isArray(pattern) ? pattern : [pattern]
   let cursor = 0
   let hasPulse = false
+  let firedSyncPulse = false
 
   segments.forEach((segment, index) => {
     if (segment <= 0) {
@@ -78,6 +93,12 @@ function triggerIosSwitchPattern(pattern: HapticPattern) {
     hasPulse = true
     const pulses = Math.max(1, Math.round(segment / IOS_PULSE_MS))
     for (let pulse = 0; pulse < pulses; pulse += 1) {
+      if (!firedSyncPulse && cursor === 0 && pulse === 0) {
+        label.click()
+        firedSyncPulse = true
+        continue
+      }
+
       window.setTimeout(() => label.click(), cursor + pulse * IOS_PULSE_MS)
     }
     cursor += pulses * IOS_PULSE_MS
@@ -93,10 +114,12 @@ export function triggerButtonHaptic(pattern: HapticPattern = 12) {
     return
   }
 
-  if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
-    const didVibrate = navigator.vibrate(pattern)
-    if (didVibrate) {
-      return
+  if (!isLikelyIOS()) {
+    if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+      const didVibrate = navigator.vibrate(pattern)
+      if (didVibrate) {
+        return
+      }
     }
   }
 
