@@ -28,6 +28,7 @@ type ServiceStatusProps = {
   timeoutMs?: number
   requiresFirstOpenApproval?: boolean
   hasFirstOpenApproval?: boolean
+  restrictWhenOffline?: boolean
 }
 
 export function ServiceStatus({
@@ -36,6 +37,7 @@ export function ServiceStatus({
   timeoutMs = 2500,
   requiresFirstOpenApproval = false,
   hasFirstOpenApproval = false,
+  restrictWhenOffline = false,
 }: ServiceStatusProps) {
   const [status, setStatus] = React.useState<RestrictedServiceStatusState>("checking")
   const targetUrl = React.useMemo(() => pingUrl ?? url, [pingUrl, url])
@@ -60,7 +62,8 @@ export function ServiceStatus({
       .catch(() => {
         if (active) {
           const blockedForApproval = requiresFirstOpenApproval && !hasFirstOpenApproval
-          setStatus(blockedForApproval ? "restricted" : "offline")
+          const shouldShowRestricted = restrictWhenOffline || blockedForApproval
+          setStatus(shouldShowRestricted ? "restricted" : "offline")
         }
       })
       .finally(() => {
@@ -72,7 +75,13 @@ export function ServiceStatus({
       clearTimeout(timeoutId)
       controller.abort()
     }
-  }, [hasFirstOpenApproval, requiresFirstOpenApproval, targetUrl, timeoutMs])
+  }, [
+    hasFirstOpenApproval,
+    requiresFirstOpenApproval,
+    restrictWhenOffline,
+    targetUrl,
+    timeoutMs,
+  ])
 
   return (
     <Badge variant="outline" className={cn(STATUS_STYLES[status])}>

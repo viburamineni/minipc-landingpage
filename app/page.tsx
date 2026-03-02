@@ -44,6 +44,7 @@ const services = [
     url: "https://minipc.tailf14e96.ts.net/",
     pingUrl: "https://minipc.tailf14e96.ts.net/",
     category: "Development",
+    restrictWhenOffline: true,
   },
   {
     name: "code-server",
@@ -170,6 +171,7 @@ export default function HomePage() {
                       service.requiresFirstOpenApproval === true
                     }
                     hasFirstOpenApproval={openedServices[service.name] === true}
+                    restrictWhenOffline={service.restrictWhenOffline === true}
                   />
                 </div>
                 <CardDescription>{service.description}</CardDescription>
