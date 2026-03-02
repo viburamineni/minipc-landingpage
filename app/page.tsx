@@ -37,8 +37,8 @@ const services = [
   {
     name: "OpenClaw",
     description: "Autonomous AI agent",
-    url: "http://192.168.4.142:18789",
-    pingUrl: "http://192.168.4.142:18789",
+    url: "https://minipc.tailf14e96.ts.net/",
+    pingUrl: "https://minipc.tailf14e96.ts.net/",
     category: "Development",
   },
   {
