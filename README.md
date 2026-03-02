@@ -44,12 +44,6 @@ Run dev server on all interfaces:
 npm run dev -- --hostname 0.0.0.0 --port 3000
 ```
 
-Find your machine IP on macOS:
-
-```bash
-ipconfig getifaddr en0
-```
-
 Then open on another device:
 
 ```text
