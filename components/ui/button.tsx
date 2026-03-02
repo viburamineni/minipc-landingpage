@@ -1,7 +1,10 @@
+"use client"
+
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
 
+import { triggerButtonHaptic } from "@/lib/haptics"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
@@ -38,15 +41,54 @@ export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean
+  haptic?: boolean
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
+  (
+    {
+      className,
+      variant,
+      size,
+      asChild = false,
+      haptic = true,
+      onPointerDown,
+      onClick,
+      disabled,
+      ...props
+    },
+    ref,
+  ) => {
+    const lastHapticAtRef = React.useRef(0)
     const Comp = asChild ? Slot : "button"
+
+    const maybeTriggerHaptic = () => {
+      if (!haptic || disabled) {
+        return
+      }
+
+      const now = Date.now()
+      if (now - lastHapticAtRef.current < 80) {
+        return
+      }
+
+      lastHapticAtRef.current = now
+      triggerButtonHaptic()
+    }
+
     return (
       <Comp
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
+        disabled={disabled}
+        onPointerDown={(event: React.PointerEvent<HTMLButtonElement>) => {
+          maybeTriggerHaptic()
+          onPointerDown?.(event)
+        }}
+        onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
+          maybeTriggerHaptic()
+          onClick?.(event)
+        }}
         {...props}
       />
     )

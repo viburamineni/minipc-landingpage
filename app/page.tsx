@@ -3,6 +3,7 @@ import { ServiceStatus } from "@/components/service-status";
 import { SystemMetricsCard } from "@/components/system-metrics";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { WebHapticsSnippets } from "@/components/web-haptics-snippets";
 import {
   Card,
   CardContent,
@@ -78,6 +79,8 @@ export default function HomePage() {
 
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-12">
         <section className="grid gap-6">
+          <WebHapticsSnippets />
+
           <SystemMetricsCard />
 
           <Card>
