@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
 import { CopyButton } from "@/components/copy-button";
 import { ServiceStatus } from "@/components/service-status";
 import { SystemMetricsCard } from "@/components/system-metrics";
@@ -19,6 +22,7 @@ const services = [
     url: "https://192.168.4.142:9443",
     pingUrl: "https://192.168.4.142:9443/favicon.ico",
     category: "Containers",
+    requiresFirstOpenApproval: true,
   },
   {
     name: "Pterodactyl",
@@ -59,6 +63,38 @@ const quickActions = [
 ];
 
 export default function HomePage() {
+  const [openedServices, setOpenedServices] = useState<Record<string, boolean>>(
+    {}
+  );
+
+  const serviceSessionKeys = useMemo(
+    () =>
+      Object.fromEntries(
+        services.map((service) => [
+          service.name,
+          `service-opened:${service.name.toLowerCase()}`,
+        ])
+      ),
+    []
+  );
+
+  useEffect(() => {
+    const restored = Object.fromEntries(
+      services.map((service) => [
+        service.name,
+        window.sessionStorage.getItem(serviceSessionKeys[service.name]) === "1",
+      ])
+    );
+    setOpenedServices(restored);
+  }, [serviceSessionKeys]);
+
+  const handleServiceOpen = (serviceName: string) => {
+    const key = serviceSessionKeys[serviceName];
+    if (!key) return;
+    window.sessionStorage.setItem(key, "1");
+    setOpenedServices((current) => ({ ...current, [serviceName]: true }));
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border">
@@ -127,7 +163,14 @@ export default function HomePage() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle>{service.name}</CardTitle>
-                  <ServiceStatus url={service.url} pingUrl={service.pingUrl} />
+                  <ServiceStatus
+                    url={service.url}
+                    pingUrl={service.pingUrl}
+                    requiresFirstOpenApproval={
+                      service.requiresFirstOpenApproval === true
+                    }
+                    hasFirstOpenApproval={openedServices[service.name] === true}
+                  />
                 </div>
                 <CardDescription>{service.description}</CardDescription>
               </CardHeader>
@@ -143,7 +186,12 @@ export default function HomePage() {
                 <div className="flex items-center gap-2">
                   <CopyButton value={service.url} label="Copy" />
                   <Button asChild size="sm">
-                    <a href={service.url} target="_blank" rel="noreferrer">
+                    <a
+                      href={service.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={() => handleServiceOpen(service.name)}
+                    >
                       Open
                     </a>
                   </Button>
