@@ -39,14 +39,6 @@ const services = [
     category: "Network",
   },
   {
-    name: "OpenClaw",
-    description: "Autonomous AI agent",
-    url: "https://minipc.tailf14e96.ts.net/",
-    pingUrl: "https://minipc.tailf14e96.ts.net/",
-    category: "Development",
-    restrictWhenOffline: true,
-  },
-  {
     name: "code-server",
     description: "Browser-based VS Code",
     url: "http://192.168.4.142:8080/login",
