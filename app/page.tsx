@@ -15,7 +15,17 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-const services = [
+type Service = {
+  name: string;
+  description: string;
+  url: string;
+  pingUrl: string;
+  category: string;
+  requiresFirstOpenApproval?: boolean;
+  restrictWhenOffline?: boolean;
+};
+
+const services: Service[] = [
   {
     name: "Portainer",
     description: "Docker management dashboard",
