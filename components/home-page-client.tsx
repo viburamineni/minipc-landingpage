@@ -15,28 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-
-type ServiceDefinition = {
-  name: string;
-  description: string;
-  protocol: "http" | "https";
-  port: number;
-  path?: string;
-  pingPath?: string;
-  category: string;
-  requiresFirstOpenApproval?: boolean;
-  restrictWhenOffline?: boolean;
-};
-
-type Service = {
-  name: string;
-  description: string;
-  url: string;
-  pingUrl: string;
-  category: string;
-  requiresFirstOpenApproval?: boolean;
-  restrictWhenOffline?: boolean;
-};
+import { buildServiceUrl, SERVICE_DEFINITIONS } from "@/lib/service-catalog";
 
 type QuickAction = {
   label: string;
@@ -51,47 +30,6 @@ type QuickActionDefinition = {
   port: number;
 };
 
-const serviceDefinitions: ServiceDefinition[] = [
-  {
-    name: "Portainer",
-    description: "Docker management dashboard",
-    protocol: "https",
-    port: 9443,
-    pingPath: "/favicon.ico",
-    category: "Containers",
-    requiresFirstOpenApproval: true,
-  },
-  {
-    name: "Pterodactyl",
-    description: "Game server management",
-    protocol: "https",
-    port: 8444,
-    pingPath: "/favicon.ico",
-    category: "Servers",
-    requiresFirstOpenApproval: true,
-  },
-  {
-    name: "Pi-hole",
-    description: "DNS ad blocking",
-    protocol: "https",
-    port: 8082,
-    path: "/admin",
-    pingPath: "/admin/favicon.ico",
-    category: "Network",
-    requiresFirstOpenApproval: true,
-  },
-  {
-    name: "code-server",
-    description: "Browser-based VS Code",
-    protocol: "https",
-    port: 8080,
-    path: "/login",
-    pingPath: "/favicon.ico",
-    category: "Development",
-    requiresFirstOpenApproval: true,
-  },
-];
-
 const quickActionDefinitions: QuickActionDefinition[] = [
   {
     label: "SSH",
@@ -100,37 +38,6 @@ const quickActionDefinitions: QuickActionDefinition[] = [
     port: 22,
   },
 ];
-
-function buildNetworkUrl(
-  protocol: "http" | "https",
-  hostname: string,
-  port: number,
-  path = ""
-) {
-  return `${protocol}://${hostname}:${port}${path}`;
-}
-
-function buildServices(hostname: string): Service[] {
-  return serviceDefinitions.map((service) => ({
-    name: service.name,
-    description: service.description,
-    url: buildNetworkUrl(
-      service.protocol,
-      hostname,
-      service.port,
-      service.path ?? ""
-    ),
-    pingUrl: buildNetworkUrl(
-      service.protocol,
-      hostname,
-      service.port,
-      service.pingPath ?? service.path ?? ""
-    ),
-    category: service.category,
-    requiresFirstOpenApproval: service.requiresFirstOpenApproval,
-    restrictWhenOffline: service.restrictWhenOffline,
-  }));
-}
 
 function buildQuickActions(hostname: string): QuickAction[] {
   return quickActionDefinitions.map((action) => ({
@@ -144,17 +51,6 @@ function buildQuickActions(hostname: string): QuickAction[] {
 
 export function HomePageClient() {
   const [currentHostname, setCurrentHostname] = useState<string | null>(null);
-  const [openedServices, setOpenedServices] = useState<Record<string, boolean>>(
-    {}
-  );
-
-  const services = useMemo(() => {
-    if (!currentHostname) {
-      return [];
-    }
-
-    return buildServices(currentHostname);
-  }, [currentHostname]);
   const quickActions = useMemo(() => {
     if (!currentHostname) {
       return [];
@@ -162,42 +58,22 @@ export function HomePageClient() {
 
     return buildQuickActions(currentHostname);
   }, [currentHostname]);
-  const servicesByName = useMemo(
-    () => new Map(services.map((service) => [service.name, service])),
-    [services]
-  );
+  const serviceLinks = useMemo(() => {
+    if (!currentHostname) {
+      return new Map();
+    }
 
-  const serviceSessionKeys = useMemo(
-    () =>
-      Object.fromEntries(
-        serviceDefinitions.map((service) => [
-          service.name,
-          `service-opened:${service.name.toLowerCase()}`,
-        ])
-      ),
-    []
-  );
+    return new Map(
+      SERVICE_DEFINITIONS.map((service) => [
+        service.id,
+        buildServiceUrl(currentHostname, service),
+      ])
+    );
+  }, [currentHostname]);
 
   useEffect(() => {
     setCurrentHostname(window.location.hostname || "localhost");
   }, []);
-
-  useEffect(() => {
-    const restored = Object.fromEntries(
-      serviceDefinitions.map((service) => [
-        service.name,
-        window.sessionStorage.getItem(serviceSessionKeys[service.name]) === "1",
-      ])
-    );
-    setOpenedServices(restored);
-  }, [serviceSessionKeys]);
-
-  const handleServiceOpen = (serviceName: string) => {
-    const key = serviceSessionKeys[serviceName];
-    if (!key) return;
-    window.sessionStorage.setItem(key, "1");
-    setOpenedServices((current) => ({ ...current, [serviceName]: true }));
-  };
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -276,69 +152,39 @@ export function HomePageClient() {
               Direct links to core dashboards
             </p>
           </div>
-          <Badge variant="secondary">{serviceDefinitions.length} tracked</Badge>
+          <Badge variant="secondary">{SERVICE_DEFINITIONS.length} tracked</Badge>
         </section>
 
         <section className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {serviceDefinitions.map((serviceDefinition) => {
-            const service = servicesByName.get(serviceDefinition.name);
+          {SERVICE_DEFINITIONS.map((service) => {
+            const serviceUrl = currentHostname
+              ? serviceLinks.get(service.id) ?? ""
+              : null;
 
             return (
-              <Card key={serviceDefinition.name} className="flex h-full flex-col">
+              <Card key={service.id} className="flex h-full flex-col">
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle>{serviceDefinition.name}</CardTitle>
-                    {currentHostname ? (
-                      <ServiceStatus
-                        url={service?.url ?? ""}
-                        pingUrl={service?.pingUrl}
-                        requiresFirstOpenApproval={
-                          serviceDefinition.requiresFirstOpenApproval === true
-                        }
-                        hasFirstOpenApproval={
-                          openedServices[serviceDefinition.name] === true
-                        }
-                        restrictWhenOffline={
-                          serviceDefinition.restrictWhenOffline === true
-                        }
-                      />
-                    ) : (
-                      <Badge
-                        variant="outline"
-                        className="border-muted text-muted-foreground"
-                      >
-                        Resolving
-                      </Badge>
-                    )}
+                    <CardTitle>{service.name}</CardTitle>
+                    <ServiceStatus statusUrl={service.statusEndpoint} />
                   </div>
-                  <CardDescription>
-                    {serviceDefinition.description}
-                  </CardDescription>
+                  <CardDescription>{service.description}</CardDescription>
                 </CardHeader>
                 <CardContent className="flex-1">
                   <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                    {serviceDefinition.category}
+                    {service.category}
                   </div>
                   <div className="mt-2 text-sm text-muted-foreground">
-                    {currentHostname && service
-                      ? service.url
-                      : "Waiting for browser hostname"}
+                    {serviceUrl ?? "Waiting for browser hostname"}
                   </div>
                 </CardContent>
                 <CardFooter className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    {currentHostname && service ? (
+                    {serviceUrl ? (
                       <>
-                        <CopyButton value={service.url} label="Copy" />
+                        <CopyButton value={serviceUrl} label="Copy" />
                         <Button asChild size="sm">
-                          <a
-                            href={service.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            onClick={() =>
-                              handleServiceOpen(serviceDefinition.name)
-                            }
-                          >
+                          <a href={serviceUrl} target="_blank" rel="noreferrer">
                             Open
                           </a>
                         </Button>

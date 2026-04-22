@@ -6,41 +6,45 @@ import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 
 type ServiceStatusState = "checking" | "online" | "offline"
-type RestrictedServiceStatusState = ServiceStatusState | "restricted"
 
-const STATUS_LABELS: Record<RestrictedServiceStatusState, string> = {
+const STATUS_LABELS: Record<ServiceStatusState, string> = {
   checking: "Checking",
   online: "Online",
   offline: "Offline",
-  restricted: "Unverified",
 }
 
-const STATUS_STYLES: Record<RestrictedServiceStatusState, string> = {
+const STATUS_STYLES: Record<ServiceStatusState, string> = {
   checking: "border-muted text-muted-foreground",
   online: "border-emerald-500/40 text-emerald-600 dark:text-emerald-400",
   offline: "border-rose-500/40 text-rose-600 dark:text-rose-400",
-  restricted: "border-amber-500/40 text-amber-600 dark:text-amber-400",
 }
 
 type ServiceStatusProps = {
-  url: string
-  pingUrl?: string
+  statusUrl: string
   timeoutMs?: number
-  requiresFirstOpenApproval?: boolean
-  hasFirstOpenApproval?: boolean
-  restrictWhenOffline?: boolean
 }
 
-export function ServiceStatus({
-  url,
-  pingUrl,
-  timeoutMs = 2500,
-  requiresFirstOpenApproval = false,
-  hasFirstOpenApproval = false,
-  restrictWhenOffline = false,
-}: ServiceStatusProps) {
-  const [status, setStatus] = React.useState<RestrictedServiceStatusState>("checking")
-  const targetUrl = React.useMemo(() => pingUrl ?? url, [pingUrl, url])
+async function resolveServiceStatus(statusUrl: string, signal: AbortSignal) {
+  const response = await fetch(statusUrl, {
+    method: "GET",
+    cache: "no-store",
+    signal,
+  })
+
+  if (response.status === 204) return true
+  if (response.status === 503) return false
+
+  const contentType = response.headers.get("content-type") ?? ""
+  if (contentType.includes("application/json")) {
+    const payload: unknown = await response.json()
+    if (typeof payload === "boolean") return payload
+  }
+
+  throw new Error(`Unexpected status response: ${response.status}`)
+}
+
+export function ServiceStatus({ statusUrl, timeoutMs = 2500 }: ServiceStatusProps) {
+  const [status, setStatus] = React.useState<ServiceStatusState>("checking")
 
   React.useEffect(() => {
     let active = true
@@ -48,22 +52,15 @@ export function ServiceStatus({
     const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs)
     setStatus("checking")
 
-    fetch(targetUrl, {
-      method: "GET",
-      mode: "no-cors",
-      cache: "no-store",
-      signal: controller.signal,
-    })
-      .then(() => {
+    resolveServiceStatus(statusUrl, controller.signal)
+      .then((isOnline) => {
         if (active) {
-          setStatus("online")
+          setStatus(isOnline ? "online" : "offline")
         }
       })
       .catch(() => {
         if (active) {
-          const blockedForApproval = requiresFirstOpenApproval && !hasFirstOpenApproval
-          const shouldShowRestricted = restrictWhenOffline || blockedForApproval
-          setStatus(shouldShowRestricted ? "restricted" : "offline")
+          setStatus("offline")
         }
       })
       .finally(() => {
@@ -75,13 +72,7 @@ export function ServiceStatus({
       clearTimeout(timeoutId)
       controller.abort()
     }
-  }, [
-    hasFirstOpenApproval,
-    requiresFirstOpenApproval,
-    restrictWhenOffline,
-    targetUrl,
-    timeoutMs,
-  ])
+  }, [statusUrl, timeoutMs])
 
   return (
     <Badge variant="outline" className={cn(STATUS_STYLES[status])}>

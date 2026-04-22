@@ -62,9 +62,14 @@ npm run start
 
 Service cards and quick actions are defined in:
 
-- `components/home-page-client.tsx` (`serviceDefinitions` and `buildQuickActions`)
+- `lib/service-catalog.ts` for service link patterns, probe targets, and status endpoints
+- `components/home-page-client.tsx` for quick actions
 
-Service and SSH links automatically use the hostname from the current request, so opening the dashboard at `http://192.168.4.124:3000` will generate service URLs against `192.168.4.124` instead of a fixed IP.
+Service cards now use same-origin `/api/status/*` routes for health checks, so status is determined server-side and no longer depends on each client browser trusting the individual service certificates.
+
+Service links still adapt to the hostname the browser used to open the dashboard, while preserving the configured HTTPS ports and paths for each service.
+
+This app is no longer configured for static export. Run it with a Next.js server (`npm run dev` or `npm run start`) so the API routes are available.
 
 Page metadata and app version wiring are in:
 
