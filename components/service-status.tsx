@@ -12,7 +12,7 @@ const STATUS_LABELS: Record<RestrictedServiceStatusState, string> = {
   checking: "Checking",
   online: "Online",
   offline: "Offline",
-  restricted: "Restricted",
+  restricted: "Unverified",
 }
 
 const STATUS_STYLES: Record<RestrictedServiceStatusState, string> = {
