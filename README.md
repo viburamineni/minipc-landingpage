@@ -60,9 +60,11 @@ npm run start
 
 ## Project Configuration
 
-Service cards and quick actions are hardcoded in:
+Service cards and quick actions are defined in:
 
-- `app/page.tsx` (`services` and `quickActions` arrays)
+- `components/home-page-client.tsx` (`serviceDefinitions` and `buildQuickActions`)
+
+Service and SSH links automatically use the hostname from the current request, so opening the dashboard at `http://192.168.4.124:3000` will generate service URLs against `192.168.4.124` instead of a fixed IP.
 
 Page metadata and app version wiring are in:
 
