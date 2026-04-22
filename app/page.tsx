@@ -109,7 +109,7 @@ export default function HomePage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-            <Badge variant="secondary">Ubuntu 24.04.3 LTS</Badge>
+            <Badge variant="secondary">Ubuntu 24.04.4 LTS</Badge>
             <span>192.168.4.142</span>
           </div>
         </div>
