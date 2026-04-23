@@ -62,14 +62,16 @@ npm run start
 
 Service cards and quick actions are defined in:
 
-- `lib/service-catalog.ts` for service link patterns, probe targets, and status endpoints
+- `lib/service-catalog.ts` for service link patterns and status endpoints
 - `components/home-page-client.tsx` for quick actions
 
-Service cards now use same-origin `/api/status/*` routes for health checks, so status is determined server-side and no longer depends on each client browser trusting the individual service certificates.
+Service cards use same-origin `/api/status/*` routes for health checks, so status no longer depends on each client browser trusting the individual service certificates.
 
 Service links still adapt to the hostname the browser used to open the dashboard, while preserving the configured HTTPS ports and paths for each service.
 
-This app is no longer configured for static export. Run it with a Next.js server (`npm run dev` or `npm run start`) so the API routes are available.
+This app is configured for static export and produces an `out/` directory during `npm run build`.
+
+The `/api/status/*` endpoints are not implemented inside this static site. They must be provided by the website host or reverse proxy that serves the exported files on the same origin.
 
 Page metadata and app version wiring are in:
 
