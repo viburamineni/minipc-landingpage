@@ -24,6 +24,22 @@ const STATUS_STYLES = {
 
 type StatusState = keyof typeof STATUS_LABELS
 
+type MetricHealth = "pending" | "healthy" | "watch" | "attention"
+
+const METRIC_HEALTH_LABELS: Record<MetricHealth, string> = {
+  pending: "Waiting",
+  healthy: "Healthy",
+  watch: "Watch",
+  attention: "Needs attention",
+}
+
+const METRIC_HEALTH_STYLES: Record<MetricHealth, string> = {
+  pending: "border-muted text-muted-foreground",
+  healthy: "border-emerald-500/40 text-emerald-600 dark:text-emerald-400",
+  watch: "border-amber-500/50 text-amber-700 dark:text-amber-300",
+  attention: "border-rose-500/40 text-rose-600 dark:text-rose-400",
+}
+
 type MetricHistory = {
   cpu: number[]
   memory: number[]
@@ -116,6 +132,17 @@ const pickUptimeSeconds = (...values: Array<number | string | null | undefined>)
 const clampPercent = (value: number | null) => {
   if (value === null) return null
   return Math.min(100, Math.max(0, value))
+}
+
+const getMetricHealth = (
+  value: number | null,
+  watchThreshold: number,
+  attentionThreshold: number,
+): MetricHealth => {
+  if (value === null) return "pending"
+  if (value >= attentionThreshold) return "attention"
+  if (value >= watchThreshold) return "watch"
+  return "healthy"
 }
 
 const formatPercent = (value: number | null) => {
@@ -239,6 +266,7 @@ function MetricPanel({
   label,
   value,
   detail,
+  health,
   data,
   stroke,
   fill,
@@ -247,17 +275,22 @@ function MetricPanel({
   label: string
   value: string
   detail?: string
+  health: MetricHealth
   data: number[]
   stroke: string
   fill: string
   children: React.ReactNode
 }) {
   return (
-          <div className="rounded-lg border border-border/60 bg-muted/30 p-3">
-
-      <div className="flex items-center justify-between">
+    <div className="rounded-lg border border-border/60 bg-muted/30 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{label}</p>
-        <span className="text-sm font-semibold text-foreground">{value}</span>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className={METRIC_HEALTH_STYLES[health]}>
+            {METRIC_HEALTH_LABELS[health]}
+          </Badge>
+          <span className="text-sm font-semibold text-foreground">{value}</span>
+        </div>
       </div>
       {detail ? <p className="mt-1 text-xs text-muted-foreground">{detail}</p> : null}
       <div className="mt-2">
@@ -425,6 +458,7 @@ export function SystemMetricsCard() {
             label="CPU load"
             value={formatPercent(metrics.cpu.total)}
             detail="Aggregate utilization"
+            health={getMetricHealth(metrics.cpu.total, 70, 90)}
             data={history.cpu}
             stroke="stroke-emerald-500"
             fill="fill-emerald-500"
@@ -447,6 +481,7 @@ export function SystemMetricsCard() {
             label="Memory usage"
             value={formatPercent(metrics.memory.percent)}
             detail={memoryUsageLabel}
+            health={getMetricHealth(metrics.memory.percent, 75, 90)}
             data={history.memory}
             stroke="stroke-sky-500"
             fill="fill-sky-500"
@@ -465,6 +500,7 @@ export function SystemMetricsCard() {
             label="Storage usage"
             value={formatPercent(metrics.disk.percent)}
             detail={diskUsageLabel}
+            health={getMetricHealth(metrics.disk.percent, 80, 92)}
             data={history.disk}
             stroke="stroke-amber-500"
             fill="fill-amber-500"
@@ -479,8 +515,7 @@ export function SystemMetricsCard() {
             </div>
           </MetricPanel>
 
-    <div className="rounded-lg border border-border/60 bg-muted/30 p-3">
-
+          <div className="rounded-lg border border-border/60 bg-muted/30 p-3">
             <div className="flex items-center justify-between">
               <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
                 Top processes

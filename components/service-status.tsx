@@ -5,23 +5,30 @@ import * as React from "react"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 
-type ServiceStatusState = "checking" | "online" | "offline"
+export type ServiceStatusState =
+  | "checking"
+  | "online"
+  | "offline"
+  | "unavailable"
 
 const STATUS_LABELS: Record<ServiceStatusState, string> = {
   checking: "Checking",
   online: "Online",
   offline: "Offline",
+  unavailable: "Status unavailable",
 }
 
 const STATUS_STYLES: Record<ServiceStatusState, string> = {
   checking: "border-muted text-muted-foreground",
   online: "border-emerald-500/40 text-emerald-600 dark:text-emerald-400",
   offline: "border-rose-500/40 text-rose-600 dark:text-rose-400",
+  unavailable: "border-amber-500/50 text-amber-700 dark:text-amber-300",
 }
 
 type ServiceStatusProps = {
   statusUrl: string
   timeoutMs?: number
+  onStatusChange?: (status: ServiceStatusState) => void
 }
 
 async function resolveServiceStatus(statusUrl: string, signal: AbortSignal) {
@@ -43,24 +50,37 @@ async function resolveServiceStatus(statusUrl: string, signal: AbortSignal) {
   throw new Error(`Unexpected status response: ${response.status}`)
 }
 
-export function ServiceStatus({ statusUrl, timeoutMs = 2500 }: ServiceStatusProps) {
+export function ServiceStatus({
+  statusUrl,
+  timeoutMs = 2500,
+  onStatusChange,
+}: ServiceStatusProps) {
   const [status, setStatus] = React.useState<ServiceStatusState>("checking")
+  const onStatusChangeRef = React.useRef(onStatusChange)
+
+  React.useEffect(() => {
+    onStatusChangeRef.current = onStatusChange
+  }, [onStatusChange])
 
   React.useEffect(() => {
     let active = true
     const controller = new AbortController()
     const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs)
     setStatus("checking")
+    onStatusChangeRef.current?.("checking")
 
     resolveServiceStatus(statusUrl, controller.signal)
       .then((isOnline) => {
         if (active) {
-          setStatus(isOnline ? "online" : "offline")
+          const nextStatus = isOnline ? "online" : "offline"
+          setStatus(nextStatus)
+          onStatusChangeRef.current?.(nextStatus)
         }
       })
       .catch(() => {
         if (active) {
-          setStatus("offline")
+          setStatus("unavailable")
+          onStatusChangeRef.current?.("unavailable")
         }
       })
       .finally(() => {
