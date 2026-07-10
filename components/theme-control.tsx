@@ -56,18 +56,44 @@ function getResolvedTheme(preference: ThemePreference): ResolvedTheme {
     : "light";
 }
 
-function applyTheme(preference: ThemePreference) {
+function getFaviconHref(theme: ResolvedTheme) {
+  const appVersion = document.documentElement.dataset.appVersion;
+  const versionQuery = appVersion
+    ? `?v=${encodeURIComponent(appVersion)}`
+    : "";
+
+  return `/icon-${theme}.svg${versionQuery}`;
+}
+
+function updateFavicon(theme: ResolvedTheme) {
+  const current = document.querySelector<HTMLLinkElement>("#theme-favicon");
+
+  if (current?.dataset.theme === theme) return;
+
+  const favicon = document.createElement("link");
+  favicon.id = "theme-favicon";
+  favicon.rel = "icon";
+  favicon.type = "image/svg+xml";
+  favicon.dataset.theme = theme;
+  favicon.href = getFaviconHref(theme);
+
+  if (current) {
+    current.replaceWith(favicon);
+    return;
+  }
+
+  document.head.appendChild(favicon);
+}
+
+function applyTheme(preference: ThemePreference, syncFavicon = true) {
   const resolvedTheme = getResolvedTheme(preference);
   const root = document.documentElement;
-  const favicon = document.querySelector<HTMLLinkElement>("#theme-favicon");
 
   root.classList.toggle("dark", resolvedTheme === "dark");
   root.dataset.themePreference = preference;
   root.style.colorScheme = resolvedTheme;
 
-  if (favicon) {
-    favicon.href = `/icon-${resolvedTheme}.svg`;
-  }
+  if (syncFavicon) updateFavicon(resolvedTheme);
 
   return resolvedTheme;
 }
@@ -137,7 +163,9 @@ function createThemeSnapshot() {
   });
 
   clonedBody
-    .querySelectorAll("script, noscript, .theme-snapshot-layer")
+    .querySelectorAll(
+      "script, noscript, .theme-snapshot-layer, .theme-icon-morph"
+    )
     .forEach((element) => element.remove());
   clonedBody.querySelectorAll("[id]").forEach((element) => {
     element.removeAttribute("id");
@@ -204,6 +232,7 @@ async function runThemeTransition(
   renderTargetTheme: () => void,
   restoreCurrentTheme: () => void,
   commitTargetTheme: () => void,
+  startIconMorph: () => void,
   onFinish: () => void
 ) {
   const { left, top, width, height } = button.getBoundingClientRect();
@@ -215,15 +244,31 @@ async function runThemeTransition(
   );
   let snapshot: HTMLElement | null = null;
   const root = document.documentElement;
+  const icon = button.querySelector<HTMLElement>(".theme-icon-morph");
+  const iconRect = icon?.getBoundingClientRect();
 
   try {
+    if (iconRect) {
+      root.style.setProperty("--theme-icon-left", `${iconRect.left}px`);
+      root.style.setProperty("--theme-icon-top", `${iconRect.top}px`);
+      root.classList.add("theme-icon-morphing");
+    }
+
     root.classList.add("theme-commit-frozen");
     renderTargetTheme();
+
+    if (icon) {
+      root.style.setProperty(
+        "--theme-icon-target-color",
+        window.getComputedStyle(icon).color
+      );
+    }
 
     const capturedTheme = createThemeSnapshot();
     snapshot = capturedTheme.snapshot;
 
     restoreCurrentTheme();
+    void icon?.offsetWidth;
 
     setSnapshotCircle(
       snapshot,
@@ -233,6 +278,7 @@ async function runThemeTransition(
       0
     );
     snapshot.style.visibility = "visible";
+    startIconMorph();
 
     await waitForFrame();
     await animateSnapshotReveal(
@@ -250,6 +296,10 @@ async function runThemeTransition(
   } finally {
     snapshot?.remove();
     root.classList.remove("theme-commit-frozen");
+    root.classList.remove("theme-icon-morphing");
+    root.style.removeProperty("--theme-icon-left");
+    root.style.removeProperty("--theme-icon-top");
+    root.style.removeProperty("--theme-icon-target-color");
     onFinish();
   }
 }
@@ -258,6 +308,7 @@ export function ThemeControl() {
   const [preference, setPreference] = React.useState<ThemePreference>("system");
   const [resolvedTheme, setResolvedTheme] =
     React.useState<ResolvedTheme>("light");
+  const [iconTheme, setIconTheme] = React.useState<ResolvedTheme>("light");
   const [isReady, setIsReady] = React.useState(false);
   const transitionLockRef = React.useRef(false);
 
@@ -273,8 +324,11 @@ export function ThemeControl() {
       // Auto remains the default when storage is unavailable.
     }
 
+    const initialResolvedTheme = applyTheme(initialPreference);
+
     setPreference(initialPreference);
-    setResolvedTheme(applyTheme(initialPreference));
+    setResolvedTheme(initialResolvedTheme);
+    setIconTheme(initialResolvedTheme);
     setIsReady(true);
   }, []);
 
@@ -283,7 +337,9 @@ export function ThemeControl() {
 
     const systemTheme = window.matchMedia("(prefers-color-scheme: dark)");
     const handleSystemThemeChange = () => {
-      setResolvedTheme(applyTheme("system"));
+      const resolved = applyTheme("system");
+      setResolvedTheme(resolved);
+      setIconTheme(resolved);
     };
     systemTheme.addEventListener("change", handleSystemThemeChange);
 
@@ -302,19 +358,20 @@ export function ThemeControl() {
       !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     const renderTheme = (themePreference: ThemePreference) => {
-      const resolved = applyTheme(themePreference);
+      const resolved = applyTheme(themePreference, false);
       flushSync(() => {
         setPreference(themePreference);
         setResolvedTheme(resolved);
       });
     };
-    const commitTheme = () => {
-      saveThemePreference(nextPreference);
-      renderTheme(nextPreference);
-    };
+    const commitTheme = () => renderTheme(nextPreference);
+
+    saveThemePreference(nextPreference);
+    updateFavicon(nextResolvedTheme);
 
     if (!shouldAnimateTheme) {
       commitTheme();
+      setIconTheme(nextResolvedTheme);
       return;
     }
 
@@ -326,30 +383,34 @@ export function ThemeControl() {
       () => renderTheme(preference),
       commitTheme,
       () => {
+        flushSync(() => setIconTheme(nextResolvedTheme));
+      },
+      () => {
         transitionLockRef.current = false;
       }
     );
   };
 
   const nextPreference = NEXT_THEME[preference];
-  const CurrentIcon = resolvedTheme === "dark" ? Moon : Sun;
 
   return (
     <button
       type="button"
       onClick={(event) => cycleTheme(event.currentTarget)}
-      className="grid size-9 place-items-center rounded-md border border-input bg-background text-muted-foreground shadow-sm transition-[color,background-color,border-color,transform] hover:scale-105 hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-95"
+      className="theme-control-button grid size-9 place-items-center rounded-md border border-input bg-background text-muted-foreground shadow-sm transition-[color,background-color,border-color] hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:opacity-80"
       aria-label={`${THEME_LABELS[preference]} appearance. Switch to ${THEME_LABELS[nextPreference]}.`}
       title={`${THEME_LABELS[preference]} appearance - switch to ${THEME_LABELS[nextPreference]}`}
     >
       <span
-        key={`${preference}-${resolvedTheme}`}
-        className="relative grid size-5 place-items-center"
+        className="theme-icon-morph relative grid size-5 place-items-center"
+        data-icon-theme={isReady ? iconTheme : undefined}
+        suppressHydrationWarning
       >
-        <CurrentIcon aria-hidden="true" className="size-4" />
+        <Sun aria-hidden="true" className="theme-icon-sun absolute size-4" />
+        <Moon aria-hidden="true" className="theme-icon-moon absolute size-4" />
         {preference === "system" ? (
           <span
-            className="font-utility absolute -bottom-1 -right-1 grid size-3 place-items-center rounded-full border border-current bg-background text-[7px] font-bold leading-none text-foreground"
+            className="theme-auto-badge font-utility absolute -bottom-1 -right-1 grid size-3 animate-in place-items-center rounded-full border border-current bg-background text-[7px] font-bold leading-none text-foreground fade-in zoom-in-75 duration-200 motion-reduce:animate-none"
             aria-hidden="true"
           >
             A
