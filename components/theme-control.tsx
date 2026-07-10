@@ -123,12 +123,10 @@ function setSnapshotCircle(
   const left = originX - radius;
   const top = originY - radius;
 
-  snapshot.style.left = `${left}px`;
-  snapshot.style.top = `${top}px`;
   snapshot.style.width = `${diameter}px`;
   snapshot.style.height = `${diameter}px`;
-  snapshotContent.style.left = `${-window.scrollX - left}px`;
-  snapshotContent.style.top = `${-window.scrollY - top}px`;
+  snapshot.style.transform = `translate3d(${left}px, ${top}px, 0)`;
+  snapshotContent.style.transform = `translate3d(${-window.scrollX - left}px, ${-window.scrollY - top}px, 0)`;
 }
 
 function copyComputedStyles(source: Element, target: HTMLElement | SVGElement) {
@@ -137,10 +135,21 @@ function copyComputedStyles(source: Element, target: HTMLElement | SVGElement) {
   SNAPSHOT_STYLE_PROPERTIES.forEach((property) => {
     target.style.setProperty(property, computedStyles.getPropertyValue(property));
   });
+}
 
-  target.style.setProperty("animation", "none", "important");
-  target.style.setProperty("caret-color", "transparent", "important");
-  target.style.setProperty("transition", "none", "important");
+function isOutsideSnapshotRange(element: Element) {
+  if (element.childElementCount === 0) return false;
+
+  const rect = element.getBoundingClientRect();
+  const verticalOverscan = window.innerHeight;
+  const horizontalOverscan = window.innerWidth;
+
+  return (
+    rect.bottom < -verticalOverscan ||
+    rect.top > window.innerHeight + verticalOverscan ||
+    rect.right < -horizontalOverscan ||
+    rect.left > window.innerWidth + horizontalOverscan
+  );
 }
 
 function createThemeSnapshot() {
@@ -150,12 +159,30 @@ function createThemeSnapshot() {
   const clonedElements = Array.from(clonedBody.querySelectorAll("*"));
   const snapshot = document.createElement("div");
   const snapshotContent = document.createElement("div");
+  const skippedBranches = new WeakSet<Element>();
+  const removedSelector =
+    "script, noscript, .theme-snapshot-layer, .theme-icon-morph";
 
   // Freeze target-theme colors in ordinary DOM so only the circular viewport moves.
   copyComputedStyles(sourceBody, snapshotContent);
 
   sourceElements.forEach((source, index) => {
     const clone = clonedElements[index];
+    const parentWasSkipped =
+      source.parentElement !== null && skippedBranches.has(source.parentElement);
+
+    if (parentWasSkipped || source.matches(removedSelector)) {
+      skippedBranches.add(source);
+      return;
+    }
+
+    if (isOutsideSnapshotRange(source)) {
+      if (clone instanceof HTMLElement || clone instanceof SVGElement) {
+        clone.style.visibility = "hidden";
+      }
+      skippedBranches.add(source);
+      return;
+    }
 
     if (clone instanceof HTMLElement || clone instanceof SVGElement) {
       copyComputedStyles(source, clone);
@@ -163,9 +190,7 @@ function createThemeSnapshot() {
   });
 
   clonedBody
-    .querySelectorAll(
-      "script, noscript, .theme-snapshot-layer, .theme-icon-morph"
-    )
+    .querySelectorAll(removedSelector)
     .forEach((element) => element.remove());
   clonedBody.querySelectorAll("[id]").forEach((element) => {
     element.removeAttribute("id");
@@ -180,7 +205,10 @@ function createThemeSnapshot() {
   snapshot.inert = true;
   snapshot.style.backgroundColor = window.getComputedStyle(sourceBody).backgroundColor;
 
+  snapshotContent.className = "theme-snapshot-content";
   snapshotContent.style.position = "absolute";
+  snapshotContent.style.top = "0";
+  snapshotContent.style.left = "0";
   snapshotContent.style.width = `${document.documentElement.scrollWidth}px`;
   snapshotContent.style.minHeight = `${document.documentElement.scrollHeight}px`;
 
@@ -199,6 +227,8 @@ function animateSnapshotReveal(
 ) {
   return new Promise<void>((resolve) => {
     const startedAt = window.performance.now();
+    const devicePixelRatio = window.devicePixelRatio || 1;
+    let lastRadius = -1;
 
     const drawFrame = (now: number) => {
       const progress = Math.min(
@@ -206,14 +236,14 @@ function animateSnapshotReveal(
         1
       );
       const easedProgress = 1 - Math.pow(1 - progress, 4);
+      const radius =
+        Math.round((endRadius + 2) * easedProgress * devicePixelRatio) /
+        devicePixelRatio;
 
-      setSnapshotCircle(
-        snapshot,
-        snapshotContent,
-        originX,
-        originY,
-        (endRadius + 2) * easedProgress
-      );
+      if (radius !== lastRadius) {
+        setSnapshotCircle(snapshot, snapshotContent, originX, originY, radius);
+        lastRadius = radius;
+      }
 
       if (progress < 1) {
         window.requestAnimationFrame(drawFrame);

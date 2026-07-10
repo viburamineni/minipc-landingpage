@@ -105,6 +105,8 @@
 
 .theme-snapshot-layer {
   position: fixed;
+  top: 0;
+  left: 0;
   z-index: 2147483646;
   display: block;
   border-radius: 50%;
@@ -114,6 +116,13 @@
   overflow: hidden;
   pointer-events: none;
   visibility: hidden;
+  backface-visibility: hidden;
+  will-change: width, height, transform;
+}
+
+.theme-snapshot-content {
+  backface-visibility: hidden;
+  will-change: transform;
 }
 
 html.theme-commit-frozen *,
