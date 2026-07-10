@@ -9,7 +9,6 @@ import {
   Globe2,
   Server,
   ShieldCheck,
-  Terminal,
   type LucideIcon,
 } from "lucide-react";
 
@@ -84,10 +83,6 @@ export function HomePageClient() {
     );
   }, [currentHostname]);
 
-  const sshUrl = currentHostname
-    ? `ssh://administrator@${currentHostname}:22`
-    : null;
-
   const statusCounts = useMemo(() => {
     return SERVICE_DEFINITIONS.reduce(
       (counts, service) => {
@@ -152,7 +147,6 @@ export function HomePageClient() {
       <main className="mx-auto w-full max-w-6xl px-5 py-8 sm:px-8 sm:py-12">
         <section
           aria-labelledby="services-heading"
-          className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_19rem] lg:gap-8"
         >
           <div className="min-w-0">
             <div className="mb-5 flex flex-wrap items-end justify-between gap-4 border-b border-border pb-5">
@@ -187,7 +181,7 @@ export function HomePageClient() {
               </div>
             </div>
 
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               {SERVICE_DEFINITIONS.map((service) => {
                 const serviceUrl = serviceLinks.get(service.id) ?? null;
                 const status = serviceStatuses[service.id];
@@ -263,48 +257,6 @@ export function HomePageClient() {
             </div>
           </div>
 
-          <aside className="h-fit rounded-lg border border-sky-200 bg-sky-50/70 p-5 dark:border-sky-900 dark:bg-sky-950/30 lg:sticky lg:top-6">
-            <div className="flex items-center gap-3">
-              <div className="grid size-9 place-items-center rounded-md bg-sky-950 text-white dark:bg-sky-100 dark:text-sky-950">
-                <Terminal aria-hidden="true" className="size-[18px]" strokeWidth={1.8} />
-              </div>
-              <div>
-                <h2 className="text-base font-semibold">Host access</h2>
-                <p className="text-xs text-slate-600 dark:text-slate-400">Recovery and maintenance</p>
-              </div>
-            </div>
-
-            <dl className="mt-6 grid gap-4 border-y border-sky-200 py-5 text-sm dark:border-sky-900">
-              <div>
-                <dt className="font-utility text-xs uppercase text-slate-500 dark:text-slate-400">Host</dt>
-                <dd className="font-utility mt-1 break-all font-medium text-slate-950 dark:text-slate-100">
-                  {currentHostname ?? "Resolving"}
-                </dd>
-              </div>
-              <div>
-                <dt className="font-utility text-xs uppercase text-slate-500 dark:text-slate-400">User</dt>
-                <dd className="font-utility mt-1 font-medium text-slate-950 dark:text-slate-100">
-                  administrator
-                </dd>
-              </div>
-            </dl>
-
-            <div className="mt-5 flex items-center gap-2">
-              {sshUrl ? (
-                <>
-                  <Button asChild className="flex-1" size="sm">
-                    <a href={sshUrl}>
-                      Open SSH
-                      <ExternalLink aria-hidden="true" className="ml-1.5 size-3.5" />
-                    </a>
-                  </Button>
-                  <CopyButton value={sshUrl} label="SSH address" />
-                </>
-              ) : (
-                <span className="text-xs text-slate-600 dark:text-slate-400">Resolving host</span>
-              )}
-            </div>
-          </aside>
         </section>
 
         <SystemMetricsCard />

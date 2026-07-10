@@ -579,13 +579,17 @@ export function SystemMetricsCard() {
           </div>
         </div>
 
-        <div className="font-utility flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-border pt-4 text-xs">
-          <span className="inline-flex items-center gap-1.5">
+        <div className="font-utility grid gap-2 border-t border-border pt-4 text-center text-xs sm:grid-cols-3 sm:text-left">
+          <span className="inline-flex items-center justify-center gap-1.5 sm:justify-self-start">
             <Clock3 aria-hidden="true" className="size-3.5" />
             Uptime {formatDuration(metrics.uptimeSeconds)}
           </span>
-          <span>Last sync {formatTimestamp(metrics.updatedAt)}</span>
-          <span className="ml-auto">Refreshes every {REFRESH_INTERVAL_MS / 1000}s</span>
+          <span className="sm:justify-self-center">
+            Last sync {formatTimestamp(metrics.updatedAt)}
+          </span>
+          <span className="sm:justify-self-end">
+            Refreshes every {REFRESH_INTERVAL_MS / 1000}s
+          </span>
         </div>
       </div>
     </section>

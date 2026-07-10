@@ -7,15 +7,6 @@ import { Moon, Sun } from "lucide-react";
 type ThemePreference = "system" | "light" | "dark";
 type ResolvedTheme = "light" | "dark";
 
-type ThemeViewTransition = {
-  ready: Promise<void>;
-  finished: Promise<void>;
-};
-
-type ThemeDocument = Document & {
-  startViewTransition?: (update: () => void) => ThemeViewTransition;
-};
-
 const THEME_STORAGE_KEY = "mini-pc-theme";
 
 const NEXT_THEME: Record<ThemePreference, ThemePreference> = {
@@ -65,65 +56,20 @@ function saveThemePreference(preference: ThemePreference) {
   }
 }
 
-function runThemeWave(
-  button: HTMLButtonElement,
-  nextResolvedTheme: ResolvedTheme,
+function runThemeTransition(
   commitTheme: () => void,
   onFinish: () => void
 ) {
-  const { left, top, width, height } = button.getBoundingClientRect();
-  const originX = left + width / 2;
-  const originY = top + height / 2;
-  const endRadius = Math.hypot(
-    Math.max(originX, window.innerWidth - originX),
-    Math.max(originY, window.innerHeight - originY)
-  );
-  const wave = document.createElement("span");
-  const targetColor =
-    nextResolvedTheme === "dark" ? "hsl(220 23% 10%)" : "hsl(210 25% 98%)";
-  let didCommit = false;
+  const root = document.documentElement;
 
-  wave.setAttribute("aria-hidden", "true");
-  Object.assign(wave.style, {
-    position: "fixed",
-    left: `${originX}px`,
-    top: `${originY}px`,
-    width: `${endRadius * 2}px`,
-    height: `${endRadius * 2}px`,
-    borderRadius: "9999px",
-    background: targetColor,
-    pointerEvents: "none",
-    transform: "translate(-50%, -50%) scale(0)",
-    transformOrigin: "center",
-    transition:
-      "transform 560ms cubic-bezier(0.22, 1, 0.36, 1), opacity 160ms ease-out",
-    zIndex: "2147483646",
-  });
-  document.body.appendChild(wave);
-
-  const commitOnce = () => {
-    if (didCommit) return;
-    didCommit = true;
-    commitTheme();
-  };
-  const commitTimer = window.setTimeout(commitOnce, 500);
-
-  window.requestAnimationFrame(() => {
-    window.requestAnimationFrame(() => {
-      wave.style.transform = "translate(-50%, -50%) scale(1)";
-    });
-  });
+  root.classList.add("theme-transitioning");
+  void root.offsetWidth;
+  commitTheme();
 
   window.setTimeout(() => {
-    window.clearTimeout(commitTimer);
-    commitOnce();
-    wave.style.opacity = "0";
-
-    window.setTimeout(() => {
-      wave.remove();
-      onFinish();
-    }, 170);
-  }, 570);
+    root.classList.remove("theme-transitioning");
+    onFinish();
+  }, 590);
 }
 
 export function ThemeControl() {
@@ -164,7 +110,7 @@ export function ThemeControl() {
     };
   }, [isReady, preference]);
 
-  const cycleTheme = (button: HTMLButtonElement) => {
+  const cycleTheme = () => {
     if (transitionLockRef.current) return;
 
     const nextPreference = NEXT_THEME[preference];
@@ -172,7 +118,6 @@ export function ThemeControl() {
     const shouldAnimateTheme =
       resolvedTheme !== nextResolvedTheme &&
       !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const startViewTransition = (document as ThemeDocument).startViewTransition;
 
     const commitTheme = () => {
       saveThemePreference(nextPreference);
@@ -190,38 +135,7 @@ export function ThemeControl() {
 
     transitionLockRef.current = true;
 
-    if (!startViewTransition) {
-      runThemeWave(button, nextResolvedTheme, commitTheme, () => {
-        transitionLockRef.current = false;
-      });
-      return;
-    }
-
-    const { left, top, width, height } = button.getBoundingClientRect();
-    const originX = left + width / 2;
-    const originY = top + height / 2;
-    const endRadius = Math.hypot(
-      Math.max(originX, window.innerWidth - originX),
-      Math.max(originY, window.innerHeight - originY)
-    );
-    const transition = startViewTransition.call(document, commitTheme);
-
-    void transition.ready.then(() => {
-      document.documentElement.animate(
-        {
-          clipPath: [
-            `circle(0px at ${originX}px ${originY}px)`,
-            `circle(${endRadius}px at ${originX}px ${originY}px)`,
-          ],
-        },
-        {
-          duration: 560,
-          easing: "cubic-bezier(0.22, 1, 0.36, 1)",
-          pseudoElement: "::view-transition-new(root)",
-        } as KeyframeAnimationOptions & { pseudoElement: string }
-      );
-    });
-    void transition.finished.finally(() => {
+    runThemeTransition(commitTheme, () => {
       transitionLockRef.current = false;
     });
   };
@@ -232,7 +146,7 @@ export function ThemeControl() {
   return (
     <button
       type="button"
-      onClick={(event) => cycleTheme(event.currentTarget)}
+      onClick={cycleTheme}
       className="grid size-9 place-items-center rounded-md border border-input bg-background text-muted-foreground shadow-sm transition-[color,background-color,border-color,transform] hover:scale-105 hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-95"
       aria-label={`${THEME_LABELS[preference]} appearance. Switch to ${THEME_LABELS[nextPreference]}.`}
       title={`${THEME_LABELS[preference]} appearance - switch to ${THEME_LABELS[nextPreference]}`}
