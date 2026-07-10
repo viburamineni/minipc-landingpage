@@ -1,24 +1,34 @@
 "use client";
 
 import * as React from "react";
-import { Monitor, Moon, Settings2, Sun, type LucideIcon } from "lucide-react";
-
-import { cn } from "@/lib/utils";
+import { flushSync } from "react-dom";
+import { Moon, Sun } from "lucide-react";
 
 type ThemePreference = "system" | "light" | "dark";
 type ResolvedTheme = "light" | "dark";
 
+type ThemeViewTransition = {
+  ready: Promise<void>;
+  finished: Promise<void>;
+};
+
+type ThemeDocument = Document & {
+  startViewTransition?: (update: () => void) => ThemeViewTransition;
+};
+
 const THEME_STORAGE_KEY = "mini-pc-theme";
 
-const THEME_OPTIONS: Array<{
-  value: ThemePreference;
-  label: string;
-  icon: LucideIcon;
-}> = [
-  { value: "system", label: "Auto", icon: Monitor },
-  { value: "light", label: "Light", icon: Sun },
-  { value: "dark", label: "Dark", icon: Moon },
-];
+const NEXT_THEME: Record<ThemePreference, ThemePreference> = {
+  system: "light",
+  light: "dark",
+  dark: "system",
+};
+
+const THEME_LABELS: Record<ThemePreference, string> = {
+  system: "Auto",
+  light: "Light",
+  dark: "Dark",
+};
 
 function isThemePreference(value: string | null): value is ThemePreference {
   return value === "system" || value === "light" || value === "dark";
@@ -43,11 +53,85 @@ function applyTheme(preference: ThemePreference) {
   if (favicon) {
     favicon.href = `/icon-${resolvedTheme}.svg`;
   }
+
+  return resolvedTheme;
+}
+
+function saveThemePreference(preference: ThemePreference) {
+  try {
+    window.localStorage.setItem(THEME_STORAGE_KEY, preference);
+  } catch {
+    // The preference still applies for this visit when storage is unavailable.
+  }
+}
+
+function runThemeWave(
+  button: HTMLButtonElement,
+  nextResolvedTheme: ResolvedTheme,
+  commitTheme: () => void,
+  onFinish: () => void
+) {
+  const { left, top, width, height } = button.getBoundingClientRect();
+  const originX = left + width / 2;
+  const originY = top + height / 2;
+  const endRadius = Math.hypot(
+    Math.max(originX, window.innerWidth - originX),
+    Math.max(originY, window.innerHeight - originY)
+  );
+  const wave = document.createElement("span");
+  const targetColor =
+    nextResolvedTheme === "dark" ? "hsl(220 23% 10%)" : "hsl(210 25% 98%)";
+  let didCommit = false;
+
+  wave.setAttribute("aria-hidden", "true");
+  Object.assign(wave.style, {
+    position: "fixed",
+    left: `${originX}px`,
+    top: `${originY}px`,
+    width: `${endRadius * 2}px`,
+    height: `${endRadius * 2}px`,
+    borderRadius: "9999px",
+    background: targetColor,
+    pointerEvents: "none",
+    transform: "translate(-50%, -50%) scale(0)",
+    transformOrigin: "center",
+    transition:
+      "transform 560ms cubic-bezier(0.22, 1, 0.36, 1), opacity 160ms ease-out",
+    zIndex: "2147483646",
+  });
+  document.body.appendChild(wave);
+
+  const commitOnce = () => {
+    if (didCommit) return;
+    didCommit = true;
+    commitTheme();
+  };
+  const commitTimer = window.setTimeout(commitOnce, 500);
+
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(() => {
+      wave.style.transform = "translate(-50%, -50%) scale(1)";
+    });
+  });
+
+  window.setTimeout(() => {
+    window.clearTimeout(commitTimer);
+    commitOnce();
+    wave.style.opacity = "0";
+
+    window.setTimeout(() => {
+      wave.remove();
+      onFinish();
+    }, 170);
+  }, 570);
 }
 
 export function ThemeControl() {
   const [preference, setPreference] = React.useState<ThemePreference>("system");
+  const [resolvedTheme, setResolvedTheme] =
+    React.useState<ResolvedTheme>("light");
   const [isReady, setIsReady] = React.useState(false);
+  const transitionLockRef = React.useRef(false);
 
   React.useEffect(() => {
     let initialPreference: ThemePreference = "system";
@@ -62,19 +146,17 @@ export function ThemeControl() {
     }
 
     setPreference(initialPreference);
-    applyTheme(initialPreference);
+    setResolvedTheme(applyTheme(initialPreference));
     setIsReady(true);
   }, []);
 
   React.useEffect(() => {
-    if (!isReady) return;
-
-    applyTheme(preference);
-
-    if (preference !== "system") return;
+    if (!isReady || preference !== "system") return;
 
     const systemTheme = window.matchMedia("(prefers-color-scheme: dark)");
-    const handleSystemThemeChange = () => applyTheme("system");
+    const handleSystemThemeChange = () => {
+      setResolvedTheme(applyTheme("system"));
+    };
     systemTheme.addEventListener("change", handleSystemThemeChange);
 
     return () => {
@@ -82,72 +164,93 @@ export function ThemeControl() {
     };
   }, [isReady, preference]);
 
-  const selectTheme = (
-    nextPreference: ThemePreference,
-    detailsElement: HTMLDetailsElement | null
-  ) => {
-    try {
-      window.localStorage.setItem(THEME_STORAGE_KEY, nextPreference);
-    } catch {
-      // The preference still applies for this visit when storage is unavailable.
+  const cycleTheme = (button: HTMLButtonElement) => {
+    if (transitionLockRef.current) return;
+
+    const nextPreference = NEXT_THEME[preference];
+    const nextResolvedTheme = getResolvedTheme(nextPreference);
+    const shouldAnimateTheme =
+      resolvedTheme !== nextResolvedTheme &&
+      !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const startViewTransition = (document as ThemeDocument).startViewTransition;
+
+    const commitTheme = () => {
+      saveThemePreference(nextPreference);
+      const resolved = applyTheme(nextPreference);
+      flushSync(() => {
+        setPreference(nextPreference);
+        setResolvedTheme(resolved);
+      });
+    };
+
+    if (!shouldAnimateTheme) {
+      commitTheme();
+      return;
     }
-    setPreference(nextPreference);
-    detailsElement?.removeAttribute("open");
+
+    transitionLockRef.current = true;
+
+    if (!startViewTransition) {
+      runThemeWave(button, nextResolvedTheme, commitTheme, () => {
+        transitionLockRef.current = false;
+      });
+      return;
+    }
+
+    const { left, top, width, height } = button.getBoundingClientRect();
+    const originX = left + width / 2;
+    const originY = top + height / 2;
+    const endRadius = Math.hypot(
+      Math.max(originX, window.innerWidth - originX),
+      Math.max(originY, window.innerHeight - originY)
+    );
+    const transition = startViewTransition.call(document, commitTheme);
+
+    void transition.ready.then(() => {
+      document.documentElement.animate(
+        {
+          clipPath: [
+            `circle(0px at ${originX}px ${originY}px)`,
+            `circle(${endRadius}px at ${originX}px ${originY}px)`,
+          ],
+        },
+        {
+          duration: 560,
+          easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+          pseudoElement: "::view-transition-new(root)",
+        } as KeyframeAnimationOptions & { pseudoElement: string }
+      );
+    });
+    void transition.finished.finally(() => {
+      transitionLockRef.current = false;
+    });
   };
 
+  const nextPreference = NEXT_THEME[preference];
+  const CurrentIcon = resolvedTheme === "dark" ? Moon : Sun;
+
   return (
-    <details className="group relative">
-      <summary
-        className="grid size-9 cursor-pointer list-none place-items-center rounded-md border border-input bg-background text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background [&::-webkit-details-marker]:hidden"
-        aria-label="Appearance settings"
-        title="Appearance settings"
+    <button
+      type="button"
+      onClick={(event) => cycleTheme(event.currentTarget)}
+      className="grid size-9 place-items-center rounded-md border border-input bg-background text-muted-foreground shadow-sm transition-[color,background-color,border-color,transform] hover:scale-105 hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-95"
+      aria-label={`${THEME_LABELS[preference]} appearance. Switch to ${THEME_LABELS[nextPreference]}.`}
+      title={`${THEME_LABELS[preference]} appearance - switch to ${THEME_LABELS[nextPreference]}`}
+    >
+      <span
+        key={`${preference}-${resolvedTheme}`}
+        className="relative grid size-5 animate-in place-items-center fade-in zoom-in-75 duration-300 motion-reduce:animate-none"
       >
-        <Settings2 aria-hidden="true" className="size-4" />
-      </summary>
-
-      <div className="absolute right-0 z-50 mt-2 w-64 rounded-lg border border-border bg-popover p-3 text-popover-foreground shadow-lg">
-        <div className="px-1 pb-3">
-          <p className="text-sm font-semibold">Appearance</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            Auto follows this device.
-          </p>
-        </div>
-
-        <div
-          className="grid grid-cols-3 gap-1 rounded-md bg-muted p-1"
-          role="radiogroup"
-          aria-label="Color theme"
-        >
-          {THEME_OPTIONS.map((option) => {
-            const OptionIcon = option.icon;
-            const isSelected = preference === option.value;
-
-            return (
-              <button
-                key={option.value}
-                type="button"
-                role="radio"
-                aria-checked={isSelected}
-                onClick={(event) =>
-                  selectTheme(
-                    option.value,
-                    event.currentTarget.closest("details")
-                  )
-                }
-                className={cn(
-                  "flex min-h-14 flex-col items-center justify-center gap-1 rounded-sm px-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  isSelected
-                    ? "bg-card text-foreground shadow-sm"
-                    : "text-muted-foreground hover:bg-card/60 hover:text-foreground"
-                )}
-              >
-                <OptionIcon aria-hidden="true" className="size-4" />
-                {option.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    </details>
+        <CurrentIcon aria-hidden="true" className="size-4" />
+        {preference === "system" ? (
+          <span
+            className="font-utility absolute -bottom-1 -right-1 grid size-3 place-items-center rounded-full border border-current bg-background text-[7px] font-bold leading-none text-foreground"
+            aria-hidden="true"
+          >
+            A
+          </span>
+        ) : null}
+      </span>
+    </button>
   );
 }
