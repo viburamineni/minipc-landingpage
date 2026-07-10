@@ -103,12 +103,24 @@
   }
 }
 
-html.theme-transitioning,
-html.theme-transitioning body,
-html.theme-transitioning body * {
-  transition-duration: 560ms !important;
-  transition-property: background-color, border-color, color, fill, stroke !important;
-  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1) !important;
+.theme-snapshot-layer {
+  position: fixed;
+  z-index: 2147483646;
+  display: block;
+  border-radius: 50%;
+  background: transparent;
+  contain: strict;
+  isolation: isolate;
+  overflow: hidden;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+html.theme-commit-frozen *,
+html.theme-commit-frozen *::before,
+html.theme-commit-frozen *::after {
+  animation: none !important;
+  transition: none !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
