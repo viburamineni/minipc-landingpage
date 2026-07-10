@@ -223,12 +223,15 @@ function animateSnapshotReveal(
   snapshotContent: HTMLElement,
   originX: number,
   originY: number,
-  endRadius: number
+  endRadius: number,
+  iconReachRadius: number,
+  onRevealReachesIcon: () => void
 ) {
   return new Promise<void>((resolve) => {
     const startedAt = window.performance.now();
     const devicePixelRatio = window.devicePixelRatio || 1;
     let lastRadius = -1;
+    let reachedIcon = false;
 
     const drawFrame = (now: number) => {
       const progress = Math.min(
@@ -243,6 +246,11 @@ function animateSnapshotReveal(
       if (radius !== lastRadius) {
         setSnapshotCircle(snapshot, snapshotContent, originX, originY, radius);
         lastRadius = radius;
+      }
+
+      if (!reachedIcon && radius >= iconReachRadius) {
+        reachedIcon = true;
+        onRevealReachesIcon();
       }
 
       if (progress < 1) {
@@ -277,6 +285,12 @@ async function runThemeTransition(
   const root = document.documentElement;
   const icon = button.querySelector<HTMLElement>(".theme-icon-morph");
   const iconRect = icon?.getBoundingClientRect();
+  const iconReachRadius = iconRect
+    ? Math.hypot(
+        iconRect.left + iconRect.width / 2 - originX,
+        iconRect.top + iconRect.height / 2 - originY
+      )
+    : 0;
 
   try {
     if (iconRect) {
@@ -309,8 +323,6 @@ async function runThemeTransition(
       0
     );
     snapshot.style.visibility = "visible";
-    iconMorphStarted = true;
-    startIconMorph();
 
     await waitForFrame();
     await animateSnapshotReveal(
@@ -318,7 +330,12 @@ async function runThemeTransition(
       capturedTheme.snapshotContent,
       originX,
       originY,
-      endRadius
+      endRadius,
+      iconReachRadius,
+      () => {
+        iconMorphStarted = true;
+        startIconMorph();
+      }
     );
 
     commitTargetTheme();

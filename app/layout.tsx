@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 }
 
 const APP_VERSION = packageJson.version
+const FAVICON_VERSION_QUERY = `?v=${encodeURIComponent(APP_VERSION)}`
 
 const themeBootstrapScript = `
   (function () {
@@ -47,6 +48,18 @@ export default function RootLayout({
   return (
     <html lang="en" data-app-version={APP_VERSION} suppressHydrationWarning>
       <head>
+        <link
+          rel="preload"
+          href={`/icon-light.svg${FAVICON_VERSION_QUERY}`}
+          as="image"
+          type="image/svg+xml"
+        />
+        <link
+          rel="preload"
+          href={`/icon-dark.svg${FAVICON_VERSION_QUERY}`}
+          as="image"
+          type="image/svg+xml"
+        />
         <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
         <noscript>
           <link rel="icon" type="image/svg+xml" href="/icon-light.svg" />
