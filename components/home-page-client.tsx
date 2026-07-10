@@ -171,7 +171,7 @@ export function HomePageClient() {
                 aria-live="polite"
               >
                 <span
-                  className={`size-2.5 rounded-full ${summary.tone}`}
+                  className={`size-2.5 rounded-full transition-colors duration-300 ${summary.tone}`}
                   aria-hidden="true"
                 />
                 <div>

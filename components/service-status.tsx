@@ -104,11 +104,17 @@ export function ServiceStatus({
   return (
     <Badge
       variant="outline"
-      className={cn("gap-1.5 font-medium", STATUS_STYLES[status])}
+      className={cn(
+        "gap-1.5 font-medium transition-[color,background-color,border-color] duration-300",
+        STATUS_STYLES[status]
+      )}
       aria-label={`Service status: ${STATUS_LABELS[status]}`}
     >
       <span
-        className={cn("size-1.5 rounded-full", STATUS_DOT_STYLES[status])}
+        className={cn(
+          "size-1.5 rounded-full transition-[background-color,transform] duration-300",
+          STATUS_DOT_STYLES[status]
+        )}
         aria-hidden="true"
       />
       {STATUS_LABELS[status]}

@@ -291,7 +291,13 @@ function MetricPanel({
           <p className="font-utility text-xs uppercase text-muted-foreground">{label}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className={cn("font-medium", METRIC_HEALTH_STYLES[health])}>
+          <Badge
+            variant="outline"
+            className={cn(
+              "font-medium transition-[color,background-color,border-color] duration-300",
+              METRIC_HEALTH_STYLES[health],
+            )}
+          >
             {METRIC_HEALTH_LABELS[health]}
           </Badge>
         </div>
@@ -460,7 +466,10 @@ export function SystemMetricsCard() {
         <div className="flex items-center gap-3">
           <Badge
             variant="outline"
-            className={cn("gap-1.5 font-medium", STATUS_STYLES[status])}
+            className={cn(
+              "gap-1.5 font-medium transition-[color,background-color,border-color] duration-300",
+              STATUS_STYLES[status],
+            )}
             role="status"
             aria-live="polite"
           >

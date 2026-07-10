@@ -243,6 +243,7 @@ async function runThemeTransition(
     Math.max(originY, window.innerHeight - originY)
   );
   let snapshot: HTMLElement | null = null;
+  let iconMorphStarted = false;
   const root = document.documentElement;
   const icon = button.querySelector<HTMLElement>(".theme-icon-morph");
   const iconRect = icon?.getBoundingClientRect();
@@ -278,6 +279,7 @@ async function runThemeTransition(
       0
     );
     snapshot.style.visibility = "visible";
+    iconMorphStarted = true;
     startIconMorph();
 
     await waitForFrame();
@@ -292,6 +294,7 @@ async function runThemeTransition(
     commitTargetTheme();
     await waitForFrame();
   } catch {
+    if (!iconMorphStarted) startIconMorph();
     commitTargetTheme();
   } finally {
     snapshot?.remove();
@@ -367,9 +370,9 @@ export function ThemeControl() {
     const commitTheme = () => renderTheme(nextPreference);
 
     saveThemePreference(nextPreference);
-    updateFavicon(nextResolvedTheme);
 
     if (!shouldAnimateTheme) {
+      updateFavicon(nextResolvedTheme);
       commitTheme();
       setIconTheme(nextResolvedTheme);
       return;
@@ -383,6 +386,7 @@ export function ThemeControl() {
       () => renderTheme(preference),
       commitTheme,
       () => {
+        updateFavicon(nextResolvedTheme);
         flushSync(() => setIconTheme(nextResolvedTheme));
       },
       () => {

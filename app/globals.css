@@ -173,6 +173,36 @@ html.theme-icon-morphing .theme-auto-badge {
   transform: rotate(0deg) scale(1);
 }
 
+.copy-icon-morph > svg {
+  transform-origin: center;
+  transition:
+    opacity 360ms ease,
+    transform 560ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.copy-icon-idle {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
+}
+
+.copy-icon-success,
+.copy-icon-error {
+  opacity: 0;
+  transform: rotate(-100deg) scale(0.5);
+}
+
+[data-copy-state="copied"] .copy-icon-idle,
+[data-copy-state="error"] .copy-icon-idle {
+  opacity: 0;
+  transform: rotate(100deg) scale(0.5);
+}
+
+[data-copy-state="copied"] .copy-icon-success,
+[data-copy-state="error"] .copy-icon-error {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

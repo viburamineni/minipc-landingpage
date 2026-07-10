@@ -22,16 +22,32 @@ export function CopyButton({
   const [copyState, setCopyState] = React.useState<"idle" | "copied" | "error">(
     "idle"
   );
+  const resetTimerRef = React.useRef<number | null>(null);
 
-  const resetCopyState = () => {
-    window.setTimeout(() => setCopyState("idle"), 2000);
+  React.useEffect(() => {
+    return () => {
+      if (resetTimerRef.current !== null) {
+        window.clearTimeout(resetTimerRef.current);
+      }
+    };
+  }, []);
+
+  const showCopyState = (state: "copied" | "error") => {
+    if (resetTimerRef.current !== null) {
+      window.clearTimeout(resetTimerRef.current);
+    }
+
+    setCopyState(state);
+    resetTimerRef.current = window.setTimeout(() => {
+      setCopyState("idle");
+      resetTimerRef.current = null;
+    }, 2000);
   };
 
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(value);
-      setCopyState("copied");
-      resetCopyState();
+      showCopyState("copied");
     } catch {
       const textarea = document.createElement("textarea");
       textarea.value = value;
@@ -42,8 +58,7 @@ export function CopyButton({
       textarea.select();
       const didCopy = document.execCommand("copy");
       document.body.removeChild(textarea);
-      setCopyState(didCopy ? "copied" : "error");
-      resetCopyState();
+      showCopyState(didCopy ? "copied" : "error");
     }
   };
 
@@ -53,7 +68,15 @@ export function CopyButton({
       size="icon"
       variant={variant}
       onClick={handleCopy}
-      className={cn("size-8 shrink-0", className)}
+      className={cn(
+        "size-8 shrink-0 transition-[color,background-color,border-color,opacity] duration-300 active:opacity-70",
+        copyState === "copied" &&
+          "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300 dark:hover:bg-emerald-950/70",
+        copyState === "error" &&
+          "border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100 dark:border-rose-800 dark:bg-rose-950/50 dark:text-rose-300 dark:hover:bg-rose-950/70",
+        className
+      )}
+      data-copy-state={copyState}
       aria-label={
         copyState === "copied"
           ? `${label} copied`
@@ -69,13 +92,11 @@ export function CopyButton({
           : `Copy ${label}`
       }
     >
-      {copyState === "copied" ? (
-        <Check aria-hidden="true" className="size-3.5" />
-      ) : copyState === "error" ? (
-        <X aria-hidden="true" className="size-3.5" />
-      ) : (
-        <Copy aria-hidden="true" className="size-3.5" />
-      )}
+      <span className="copy-icon-morph relative grid size-3.5 place-items-center" aria-hidden="true">
+        <Copy className="copy-icon-idle absolute size-3.5" />
+        <Check className="copy-icon-success absolute size-3.5" />
+        <X className="copy-icon-error absolute size-3.5" />
+      </span>
       <span className="sr-only" aria-live="polite">
         {copyState === "copied"
           ? "Copied"
