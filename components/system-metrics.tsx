@@ -17,9 +17,9 @@ const STATUS_LABELS = {
 } as const
 
 const STATUS_STYLES = {
-  loading: "border-sky-200 bg-sky-50 text-sky-700",
-  online: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  offline: "border-slate-200 bg-slate-50 text-slate-600",
+  loading: "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-800 dark:bg-sky-950/50 dark:text-sky-300",
+  online: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300",
+  offline: "border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300",
 } as const
 
 type StatusState = keyof typeof STATUS_LABELS
@@ -34,10 +34,10 @@ const METRIC_HEALTH_LABELS: Record<MetricHealth, string> = {
 }
 
 const METRIC_HEALTH_STYLES: Record<MetricHealth, string> = {
-  pending: "border-slate-200 bg-slate-50 text-slate-600",
-  healthy: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  watch: "border-amber-200 bg-amber-50 text-amber-800",
-  attention: "border-rose-200 bg-rose-50 text-rose-700",
+  pending: "border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300",
+  healthy: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300",
+  watch: "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-300",
+  attention: "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950/50 dark:text-rose-300",
 }
 
 type MetricHistory = {

@@ -19,6 +19,7 @@ import {
   type ServiceStatusState,
 } from "@/components/service-status";
 import { SystemMetricsCard } from "@/components/system-metrics";
+import { ThemeControl } from "@/components/theme-control";
 import { Button } from "@/components/ui/button";
 import {
   buildServiceUrl,
@@ -132,15 +133,18 @@ export function HomePageClient() {
             </div>
           </div>
 
-          <div className="hidden items-center gap-5 text-sm sm:flex">
-            <div className="text-right">
-              <p className="font-medium text-foreground">
-                {currentHostname ?? "Resolving host"}
-              </p>
-              <p className="text-xs text-muted-foreground">Ubuntu 24.04.4 LTS</p>
+          <div className="flex items-center gap-3">
+            <div className="hidden items-center gap-5 text-sm sm:flex">
+              <div className="text-right">
+                <p className="font-medium text-foreground">
+                  {currentHostname ?? "Resolving host"}
+                </p>
+                <p className="text-xs text-muted-foreground">Ubuntu 24.04.4 LTS</p>
+              </div>
+              <span className="h-8 w-px bg-border" aria-hidden="true" />
+              <Globe2 aria-hidden="true" className="size-4 text-muted-foreground" />
             </div>
-            <span className="h-8 w-px bg-border" aria-hidden="true" />
-            <Globe2 aria-hidden="true" className="size-4 text-muted-foreground" />
+            <ThemeControl />
           </div>
         </div>
       </header>
@@ -192,7 +196,7 @@ export function HomePageClient() {
                 return (
                   <article
                     key={service.id}
-                    className="group flex min-h-56 flex-col rounded-lg border border-border bg-card p-5 shadow-sm transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-slate-400 hover:shadow-md"
+                    className="group flex min-h-56 flex-col rounded-lg border border-border bg-card p-5 shadow-sm transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-slate-400 hover:shadow-md dark:hover:border-slate-600"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="grid size-9 place-items-center rounded-md bg-secondary text-secondary-foreground">
@@ -259,27 +263,27 @@ export function HomePageClient() {
             </div>
           </div>
 
-          <aside className="h-fit rounded-lg border border-sky-200 bg-sky-50/70 p-5 lg:sticky lg:top-6">
+          <aside className="h-fit rounded-lg border border-sky-200 bg-sky-50/70 p-5 dark:border-sky-900 dark:bg-sky-950/30 lg:sticky lg:top-6">
             <div className="flex items-center gap-3">
-              <div className="grid size-9 place-items-center rounded-md bg-sky-950 text-white">
+              <div className="grid size-9 place-items-center rounded-md bg-sky-950 text-white dark:bg-sky-100 dark:text-sky-950">
                 <Terminal aria-hidden="true" className="size-[18px]" strokeWidth={1.8} />
               </div>
               <div>
                 <h2 className="text-base font-semibold">Host access</h2>
-                <p className="text-xs text-slate-600">Recovery and maintenance</p>
+                <p className="text-xs text-slate-600 dark:text-slate-400">Recovery and maintenance</p>
               </div>
             </div>
 
-            <dl className="mt-6 grid gap-4 border-y border-sky-200 py-5 text-sm">
+            <dl className="mt-6 grid gap-4 border-y border-sky-200 py-5 text-sm dark:border-sky-900">
               <div>
-                <dt className="font-utility text-xs uppercase text-slate-500">Host</dt>
-                <dd className="font-utility mt-1 break-all font-medium text-slate-950">
+                <dt className="font-utility text-xs uppercase text-slate-500 dark:text-slate-400">Host</dt>
+                <dd className="font-utility mt-1 break-all font-medium text-slate-950 dark:text-slate-100">
                   {currentHostname ?? "Resolving"}
                 </dd>
               </div>
               <div>
-                <dt className="font-utility text-xs uppercase text-slate-500">User</dt>
-                <dd className="font-utility mt-1 font-medium text-slate-950">
+                <dt className="font-utility text-xs uppercase text-slate-500 dark:text-slate-400">User</dt>
+                <dd className="font-utility mt-1 font-medium text-slate-950 dark:text-slate-100">
                   administrator
                 </dd>
               </div>
@@ -297,7 +301,7 @@ export function HomePageClient() {
                   <CopyButton value={sshUrl} label="SSH address" />
                 </>
               ) : (
-                <span className="text-xs text-slate-600">Resolving host</span>
+                <span className="text-xs text-slate-600 dark:text-slate-400">Resolving host</span>
               )}
             </div>
           </aside>

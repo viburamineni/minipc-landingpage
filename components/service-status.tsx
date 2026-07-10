@@ -19,10 +19,10 @@ const STATUS_LABELS: Record<ServiceStatusState, string> = {
 }
 
 const STATUS_STYLES: Record<ServiceStatusState, string> = {
-  checking: "border-sky-200 bg-sky-50 text-sky-700",
-  online: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  offline: "border-rose-200 bg-rose-50 text-rose-700",
-  unavailable: "border-amber-200 bg-amber-50 text-amber-800",
+  checking: "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-800 dark:bg-sky-950/50 dark:text-sky-300",
+  online: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300",
+  offline: "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950/50 dark:text-rose-300",
+  unavailable: "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-300",
 }
 
 const STATUS_DOT_STYLES: Record<ServiceStatusState, string> = {
