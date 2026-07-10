@@ -1,25 +1,25 @@
 "use client"
 
 import * as React from "react"
+import { Activity, Clock3, Cpu, HardDrive, MemoryStick } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 
 const METRICS_BASE = "/api/metrics"
-const REFRESH_INTERVAL_MS = 1000
+const REFRESH_INTERVAL_MS = 5000
 const MAX_SAMPLES = 24
 
 const STATUS_LABELS = {
-  loading: "Checking",
-  online: "Online",
-  offline: "Offline",
+  loading: "Connecting",
+  online: "Live",
+  offline: "Telemetry unavailable",
 } as const
 
 const STATUS_STYLES = {
-  loading: "border-muted text-muted-foreground",
-  online: "border-emerald-500/40 text-emerald-600 dark:text-emerald-400",
-  offline: "border-rose-500/40 text-rose-600 dark:text-rose-400",
+  loading: "border-sky-200 bg-sky-50 text-sky-700",
+  online: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  offline: "border-slate-200 bg-slate-50 text-slate-600",
 } as const
 
 type StatusState = keyof typeof STATUS_LABELS
@@ -34,10 +34,10 @@ const METRIC_HEALTH_LABELS: Record<MetricHealth, string> = {
 }
 
 const METRIC_HEALTH_STYLES: Record<MetricHealth, string> = {
-  pending: "border-muted text-muted-foreground",
-  healthy: "border-emerald-500/40 text-emerald-600 dark:text-emerald-400",
-  watch: "border-amber-500/50 text-amber-700 dark:text-amber-300",
-  attention: "border-rose-500/40 text-rose-600 dark:text-rose-400",
+  pending: "border-slate-200 bg-slate-50 text-slate-600",
+  healthy: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  watch: "border-amber-200 bg-amber-50 text-amber-800",
+  attention: "border-rose-200 bg-rose-50 text-rose-700",
 }
 
 type MetricHistory = {
@@ -263,6 +263,7 @@ function Sparkline({
 }
 
 function MetricPanel({
+  icon: Icon,
   label,
   value,
   detail,
@@ -272,6 +273,7 @@ function MetricPanel({
   fill,
   children,
 }: {
+  icon: typeof Cpu
   label: string
   value: string
   detail?: string
@@ -282,21 +284,28 @@ function MetricPanel({
   children: React.ReactNode
 }) {
   return (
-    <div className="rounded-lg border border-border/60 bg-muted/30 p-3">
+    <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{label}</p>
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className={METRIC_HEALTH_STYLES[health]}>
+          <Icon aria-hidden="true" className="size-4 text-muted-foreground" strokeWidth={1.8} />
+          <p className="font-utility text-xs uppercase text-muted-foreground">{label}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className={cn("font-medium", METRIC_HEALTH_STYLES[health])}>
             {METRIC_HEALTH_LABELS[health]}
           </Badge>
-          <span className="text-sm font-semibold text-foreground">{value}</span>
         </div>
       </div>
-      {detail ? <p className="mt-1 text-xs text-muted-foreground">{detail}</p> : null}
-      <div className="mt-2">
+      <div className="mt-4 flex items-end justify-between gap-3">
+        <span className="text-3xl font-semibold leading-none text-foreground">{value}</span>
+        {detail ? <p className="text-right text-xs text-muted-foreground">{detail}</p> : null}
+      </div>
+      <div className="mt-3">
         <Sparkline data={data} strokeClassName={stroke} fillClassName={fill} />
       </div>
-      <div className="mt-2 grid gap-1 text-xs text-muted-foreground">{children}</div>
+      <div className="mt-3 grid gap-1 border-t border-border pt-3 text-xs text-muted-foreground">
+        {children}
+      </div>
     </div>
   )
 }
@@ -408,7 +417,7 @@ export function SystemMetricsCard() {
         },
         processes: topProcesses,
         uptimeSeconds: uptimeSeconds ?? null,
-        updatedAt: new Date(),
+        updatedAt: anySuccess ? new Date() : null,
       })
 
       setHistory((prev) => ({
@@ -441,20 +450,30 @@ export function SystemMetricsCard() {
       : "Usage data pending"
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>System metrics</CardTitle>
-          <Badge variant="outline" className={cn(STATUS_STYLES[status])}>
+    <section aria-labelledby="metrics-heading" className="mt-12 border-t border-border pt-8 sm:mt-16 sm:pt-10">
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="font-utility text-xs uppercase text-muted-foreground">Host telemetry</p>
+          <h2 id="metrics-heading" className="mt-1 text-2xl font-semibold">System metrics</h2>
+          <p className="mt-1 text-sm text-muted-foreground">CPU, memory, storage, and active processes</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Badge
+            variant="outline"
+            className={cn("gap-1.5 font-medium", STATUS_STYLES[status])}
+            role="status"
+            aria-live="polite"
+          >
+            <Activity aria-hidden="true" className="size-3.5" />
             {STATUS_LABELS[status]}
           </Badge>
         </div>
-        <CardDescription>Live CPU, memory, disk, and process telemetry</CardDescription>
-      </CardHeader>
+      </div>
 
-      <CardContent className="grid gap-4 text-sm text-muted-foreground">
+      <div className="grid gap-4 text-sm text-muted-foreground">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <MetricPanel
+            icon={Cpu}
             label="CPU load"
             value={formatPercent(metrics.cpu.total)}
             detail="Aggregate utilization"
@@ -478,6 +497,7 @@ export function SystemMetricsCard() {
           </MetricPanel>
 
           <MetricPanel
+            icon={MemoryStick}
             label="Memory usage"
             value={formatPercent(metrics.memory.percent)}
             detail={memoryUsageLabel}
@@ -497,6 +517,7 @@ export function SystemMetricsCard() {
           </MetricPanel>
 
           <MetricPanel
+            icon={HardDrive}
             label="Storage usage"
             value={formatPercent(metrics.disk.percent)}
             detail={diskUsageLabel}
@@ -515,16 +536,17 @@ export function SystemMetricsCard() {
             </div>
           </MetricPanel>
 
-          <div className="rounded-lg border border-border/60 bg-muted/30 p-3">
+          <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
             <div className="flex items-center justify-between">
-              <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                Top processes
-              </p>
+              <div className="flex items-center gap-2">
+                <Activity aria-hidden="true" className="size-4 text-muted-foreground" strokeWidth={1.8} />
+                <p className="font-utility text-xs uppercase text-muted-foreground">Top processes</p>
+              </div>
               <span className="text-xs text-muted-foreground">
                 {metrics.processes.length ? `${metrics.processes.length} shown` : "No data"}
               </span>
             </div>
-            <div className="mt-2 grid gap-2 text-xs text-muted-foreground">
+            <div className="mt-5 grid gap-3 text-xs text-muted-foreground">
               {metrics.processes.length ? (
                 metrics.processes.map((process) => (
                   <div
@@ -546,18 +568,26 @@ export function SystemMetricsCard() {
                   </div>
                 ))
               ) : (
-                <p className="text-xs text-muted-foreground">Waiting for process data.</p>
+                <div className="grid min-h-36 place-items-center rounded-md bg-muted/60 px-4 text-center">
+                  <div>
+                    <Activity aria-hidden="true" className="mx-auto size-5 text-slate-400" />
+                    <p className="mt-2 text-xs text-muted-foreground">Process data is unavailable.</p>
+                  </div>
+                </div>
               )}
             </div>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-          <span>Uptime: {formatDuration(metrics.uptimeSeconds)}</span>
-          <span>Last sync: {formatTimestamp(metrics.updatedAt)}</span>
-          <span>Refreshes every {REFRESH_INTERVAL_MS / 1000}s</span>
+        <div className="font-utility flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-border pt-4 text-xs">
+          <span className="inline-flex items-center gap-1.5">
+            <Clock3 aria-hidden="true" className="size-3.5" />
+            Uptime {formatDuration(metrics.uptimeSeconds)}
+          </span>
+          <span>Last sync {formatTimestamp(metrics.updatedAt)}</span>
+          <span className="ml-auto">Refreshes every {REFRESH_INTERVAL_MS / 1000}s</span>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   )
 }

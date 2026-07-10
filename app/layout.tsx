@@ -5,8 +5,8 @@ import "./globals.css"
 import packageJson from "../package.json"
 
 export const metadata: Metadata = {
-  title: "Home Server",
-  description: "A compact powerhouse landing page built with shadcn/ui."
+  title: "mini.pc | Home server control",
+  description: "Local services and system health for mini.pc."
 }
 
 const APP_VERSION = packageJson.version

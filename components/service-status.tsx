@@ -19,10 +19,17 @@ const STATUS_LABELS: Record<ServiceStatusState, string> = {
 }
 
 const STATUS_STYLES: Record<ServiceStatusState, string> = {
-  checking: "border-muted text-muted-foreground",
-  online: "border-emerald-500/40 text-emerald-600 dark:text-emerald-400",
-  offline: "border-rose-500/40 text-rose-600 dark:text-rose-400",
-  unavailable: "border-amber-500/50 text-amber-700 dark:text-amber-300",
+  checking: "border-sky-200 bg-sky-50 text-sky-700",
+  online: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  offline: "border-rose-200 bg-rose-50 text-rose-700",
+  unavailable: "border-amber-200 bg-amber-50 text-amber-800",
+}
+
+const STATUS_DOT_STYLES: Record<ServiceStatusState, string> = {
+  checking: "bg-sky-500",
+  online: "bg-emerald-500",
+  offline: "bg-rose-500",
+  unavailable: "bg-amber-500",
 }
 
 type ServiceStatusProps = {
@@ -95,7 +102,15 @@ export function ServiceStatus({
   }, [statusUrl, timeoutMs])
 
   return (
-    <Badge variant="outline" className={cn(STATUS_STYLES[status])}>
+    <Badge
+      variant="outline"
+      className={cn("gap-1.5 font-medium", STATUS_STYLES[status])}
+      aria-label={`Service status: ${STATUS_LABELS[status]}`}
+    >
+      <span
+        className={cn("size-1.5 rounded-full", STATUS_DOT_STYLES[status])}
+        aria-hidden="true"
+      />
       {STATUS_LABELS[status]}
     </Badge>
   )

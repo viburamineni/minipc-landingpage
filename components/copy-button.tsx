@@ -1,77 +1,88 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
+import { Check, Copy, X } from "lucide-react";
 
-import { Button, type ButtonProps } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import { Button, type ButtonProps } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 type CopyButtonProps = {
-  value: string
-  label?: string
-  className?: string
-  variant?: ButtonProps["variant"]
-  size?: ButtonProps["size"]
-}
+  value: string;
+  label?: string;
+  className?: string;
+  variant?: ButtonProps["variant"];
+};
 
 export function CopyButton({
   value,
-  label = "Copy",
+  label = "address",
   className,
   variant = "outline",
-  size = "sm",
 }: CopyButtonProps) {
-  const [copied, setCopied] = React.useState(false)
+  const [copyState, setCopyState] = React.useState<"idle" | "copied" | "error">(
+    "idle"
+  );
 
-  const copyWithExecCommand = () => {
-    const textarea = document.createElement("textarea")
-    textarea.value = value
-    textarea.setAttribute("readonly", "true")
-    textarea.style.position = "absolute"
-    textarea.style.left = "-9999px"
-    document.body.appendChild(textarea)
-    textarea.select()
+  const resetCopyState = () => {
+    window.setTimeout(() => setCopyState("idle"), 2000);
+  };
 
-    const didCopy = document.execCommand("copy")
-    document.body.removeChild(textarea)
-
-    return didCopy
-  }
-
-  const handleCopy = () => {
+  const handleCopy = async () => {
     try {
-      const didCopy = copyWithExecCommand()
-      if (didCopy) {
-        setCopied(true)
-        window.setTimeout(() => setCopied(false), 2000)
-        return
-      }
-
-      if (navigator?.clipboard?.writeText) {
-        void navigator.clipboard
-          .writeText(value)
-          .then(() => {
-            setCopied(true)
-            window.setTimeout(() => setCopied(false), 2000)
-          })
-          .catch(() => setCopied(false))
-      } else {
-        setCopied(false)
-      }
+      await navigator.clipboard.writeText(value);
+      setCopyState("copied");
+      resetCopyState();
     } catch {
-      setCopied(false)
+      const textarea = document.createElement("textarea");
+      textarea.value = value;
+      textarea.setAttribute("readonly", "true");
+      textarea.style.position = "fixed";
+      textarea.style.left = "-9999px";
+      document.body.appendChild(textarea);
+      textarea.select();
+      const didCopy = document.execCommand("copy");
+      document.body.removeChild(textarea);
+      setCopyState(didCopy ? "copied" : "error");
+      resetCopyState();
     }
-  }
+  };
 
   return (
     <Button
       type="button"
-      size={size}
+      size="icon"
       variant={variant}
       onClick={handleCopy}
-      className={cn("shrink-0", className)}
-      aria-label={`Copy ${label.toLowerCase()}`}
+      className={cn("size-8 shrink-0", className)}
+      aria-label={
+        copyState === "copied"
+          ? `${label} copied`
+          : copyState === "error"
+          ? `Could not copy ${label}`
+          : `Copy ${label}`
+      }
+      title={
+        copyState === "copied"
+          ? "Copied"
+          : copyState === "error"
+          ? "Copy failed"
+          : `Copy ${label}`
+      }
     >
-      {copied ? "Copied" : label}
+      {copyState === "copied" ? (
+        <Check aria-hidden="true" className="size-3.5" />
+      ) : copyState === "error" ? (
+        <X aria-hidden="true" className="size-3.5" />
+      ) : (
+        <Copy aria-hidden="true" className="size-3.5" />
+      )}
+      <span className="sr-only" aria-live="polite">
+        {copyState === "copied"
+          ? "Copied"
+          : copyState === "error"
+          ? "Copy failed"
+          : ""}
+      </span>
     </Button>
-  )
+  );
 }

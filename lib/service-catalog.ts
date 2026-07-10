@@ -6,13 +6,6 @@ type LinkTarget = {
   path?: string
 }
 
-type ProbeTarget = {
-  protocol: "http" | "https"
-  hostname: string
-  port?: number
-  path: string
-}
-
 export type ServiceDefinition = {
   id: ServiceId
   name: string
@@ -20,10 +13,7 @@ export type ServiceDefinition = {
   category: string
   statusEndpoint: `/api/status/${string}`
   linkTarget: LinkTarget
-  probeTarget: ProbeTarget
 }
-
-const SERVICE_HOSTNAME = "192.168.4.142"
 
 export const SERVICE_DEFINITIONS: ServiceDefinition[] = [
   {
@@ -36,12 +26,6 @@ export const SERVICE_DEFINITIONS: ServiceDefinition[] = [
       protocol: "https",
       port: 9443,
     },
-    probeTarget: {
-      protocol: "https",
-      hostname: SERVICE_HOSTNAME,
-      port: 9443,
-      path: "/",
-    },
   },
   {
     id: "pterodactyl",
@@ -52,12 +36,6 @@ export const SERVICE_DEFINITIONS: ServiceDefinition[] = [
     linkTarget: {
       protocol: "https",
       port: 8444,
-    },
-    probeTarget: {
-      protocol: "https",
-      hostname: SERVICE_HOSTNAME,
-      port: 8444,
-      path: "/",
     },
   },
   {
@@ -70,11 +48,6 @@ export const SERVICE_DEFINITIONS: ServiceDefinition[] = [
       protocol: "https",
       path: "/admin/",
     },
-    probeTarget: {
-      protocol: "https",
-      hostname: SERVICE_HOSTNAME,
-      path: "/admin/",
-    },
   },
   {
     id: "code-server",
@@ -84,12 +57,6 @@ export const SERVICE_DEFINITIONS: ServiceDefinition[] = [
     statusEndpoint: "/api/status/code-server",
     linkTarget: {
       protocol: "https",
-      port: 8080,
-      path: "/login",
-    },
-    probeTarget: {
-      protocol: "https",
-      hostname: SERVICE_HOSTNAME,
       port: 8080,
       path: "/login",
     },
