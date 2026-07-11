@@ -560,13 +560,18 @@ export function SystemMetricsCard() {
                 metrics.processes.map((process) => (
                   <div
                     key={`${process.name}-${process.pid}`}
-                    className="flex items-center justify-between gap-3"
+                    className="flex min-w-0 items-center justify-between gap-3"
                   >
-                    <div>
-                      <p className="text-sm font-medium text-foreground">{process.name}</p>
+                    <div className="min-w-0 flex-1">
+                      <p
+                        className="truncate text-sm font-medium text-foreground"
+                        title={process.name}
+                      >
+                        {process.name}
+                      </p>
                       <p className="text-xs text-muted-foreground">PID {process.pid ?? "--"}</p>
                     </div>
-                    <div className="text-right">
+                    <div className="shrink-0 text-right">
                       <p className="text-sm text-foreground">
                         {formatPercent(process.cpu ?? null)}
                       </p>
