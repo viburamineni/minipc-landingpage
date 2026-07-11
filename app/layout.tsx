@@ -5,7 +5,7 @@ import "./globals.css"
 import packageJson from "../package.json"
 
 export const metadata: Metadata = {
-  title: "mini.pc | Home server control",
+  title: "mini.pc",
   description: "Local services and system health for mini.pc."
 }
 
